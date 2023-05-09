@@ -19,4 +19,4 @@ exclude_paths:
   - .github/
   - examples/roles/
 mock_roles:
-  - linux-system-roles.template
+  - linux-system-roles.systemd
