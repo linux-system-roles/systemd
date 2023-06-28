@@ -1,75 +1,88 @@
-# Role Name
+# systemd
 
-![template](https://github.com/linux-system-roles/template/workflows/tox/badge.svg)
+![template](https://github.com/linux-system-roles/systemd/workflows/tox/badge.svg)
 
-A template for an ansible role that configures some GNU/Linux subsystem or
-service. A brief description of the role goes here.
-
-## Requirements
-
-Any prerequisites that may not be covered by Ansible itself or the role should
-be mentioned here.  This includes platform dependencies not managed by the
-role, hardware requirements, external collections, etc.  There should be a
-distinction between *control node* requirements (like collections) and
-*managed node* requirements (like special hardware, platform provisioning).
-
-
-### Collection requirements
-
-For instance, if the role depends on some collections and
-has a `meta/collection-requirements.yml` file for installing those
-dependencies, it should be mentioned here that the user should run
-
-```
-ansible-galaxy collection install -vv -r meta/collection-requirements.yml
-```
-
-on the *control node* before using the role.
+Ansible role that can be used to deploy unit files and manage systemd units. Role is a convenience
+wrapper around systemd and template Ansible Core modules.
 
 ## Role Variables
 
-A description of all input variables (i.e. variables that are defined in
-`defaults/main.yml`) for the role should go here as these form an API of the
-role.  Each variable should have its own section e.g.
+List of variables consumed by the role follows, note that none of them is mandatory.
 
-### template_foo
+### systemd_unit_files
 
-This variable is required.  It is a string that lists the foo of the role.
-There is no default value.
+List of systemd unit file names that should be deployed to managed nodes.
 
-### template_bar
+### systemd_unit_file_templates
 
-This variable is optional.  It is a boolean that tells the role to disable bar.
-The default value is `true`.
+List of systemd unit file names that should be deployed to managed nodes. Each name should
+correspond to Jinja template file that will be templated out to managed nodes, e.g. for unit
+`foo.service` the respective `foo.service.j2` will be templated and copied over to managed
+nodes.
 
-Variables that are not intended as input, like variables defined in
-`vars/main.yml`, variables that are read from other roles and/or the global
-scope (ie. hostvars, group vars, etc.) can be also mentioned here but keep in
-mind that as these are probably not part of the role API they may change during
-the lifetime.
+### systemd_dropins
+
+List of systemd drop in files that will be templated out to managed hosts and will extend
+respective systemd unit files. Name of the unit file that given entry extends is encoded in
+the name of the entry itself. For example, for entry `foo.service.conf` it is expected that
+`foo.service.conf.j2` Jinja template exists and resulting dropin file will extend `foo.service`
+unit file.
+
+### systemd_started_units
+
+List of unit names that shall be started via systemd.
+
+### systemd_stopped_units
+
+List of unit names that shall be stopped via systemd.
+
+### systemd_restarted_units
+
+List of unit names that shall be restarted via systemd.
+
+### systemd_reloaded_units
+
+List of unit names that shall be reloaded via systemd.
+
+### systemd_enabled_units
+
+List of unit files that shall be enabled via systemd.
+
+### systemd_disabled_units
+
+List of unit files that shall be disabled via systemd.
+
+### systemd_masked_units
+
+List of unit files that shall be masked via systemd.
+
+### systemd_unmasked_units
+
+List of unit files that shall be unmasked via systemd.
 
 Example of setting the variables:
 
 ```yaml
-template_foo: "oof"
-template_bar: false
+systemd_unit_files:
+  - foo.service
+  - bar.service
+systemd_dropins:
+  - cups.service.conf.j2
+  - avahi-daemon.service.conf.j2
+systemd_started_units:
+  - foo.service
+  - bar.service
+systemd_enabled_units:
+  - foo.service
+  - bar.service
 ```
 
 ## Variables Exported by the Role
 
-This section is optional.  Some roles may export variables for playbooks to
-use later.  These are analogous to "return values" in Ansible modules.  For
-example, if a role performs some action that will require a system reboot, but
-the user wants to defer the reboot, the role might set a variable like
-`template_reboot_needed: true` that the playbook can use to reboot at a more
-convenient time.
+### `systemd_units`
 
-Example:
-
-### template_reboot_needed
-
-Default `false` - if `true`, this means a reboot is needed to apply the changes
-made by the role
+Variable shall contain a list of dictionaries where each entry describes state of one systemd unit
+present on the managed host.
 
 ## Example Playbook
 
@@ -77,23 +90,23 @@ Including an example of how to use your role (for instance, with variables
 passed in as parameters) is always nice for users too:
 
 ```yaml
-- name: Manage the template subsystem
+- name: Deploy and start systemd unit
   hosts: all
   vars:
-    template_foo: "foo foo!"
-    template_bar: false
+    systemd_unit_files:
+      - foo.service
+    systemd_started_units:
+      - foo.service
+    systemd_enabled_units:
+      - foo.service
   roles:
-    - linux-system-roles.template
+    - linux-system-roles.systemd
 ```
-
-More examples can be provided in the [`examples/`](examples) directory. These
-can be useful, especially for documentation.
 
 ## License
 
-Whenever possible, please prefer MIT.
+MIT
 
-## Author Information
+## Author
 
-An optional section for the role authors to include contact information, or a
-website (HTML is not allowed).
+Michal Sekletar <msekleta@redhat.com>

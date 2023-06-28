@@ -1,25 +1,107 @@
 # SPDX-License-Identifier: MIT
 ---
-- name: Set platform/version specific variables
-  include_tasks: tasks/set_vars.yml
-
-# Examples of some tasks:
 - name: Ensure required packages are installed
   package:
-    name: "{{ __template_packages }}"
+    name: "{{ __systemd_packages }}"
     state: present
 
-- name: Ensure required services are enabled and started
-  service:
+- name: Deploy unit files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ __admin_units_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ systemd_unit_files }}"
+  register: __systemd_unit_files_result
+
+- name: Deploy unit file templates
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ __admin_units_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ systemd_unit_file_templates }}"
+  register: __systemd_unit_file_templates_result
+
+- name: Create drop-in directories
+  file:
+    path: "{{ __admin_units_dir }}/{{ '.'.join(item.split('.')[:-1]) }}.d/"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ systemd_dropins }}"
+
+- name: Deploy systemd drop in config
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ __admin_units_dir }}/\
+     {{ '.'.join(item.split('.')[:-1]) }}.d/\
+     99-override.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ systemd_dropins }}"
+  register: __systemd_dropins_result
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  when: >
+    __systemd_unit_files_result is changed or
+    __systemd_unit_file_templates_result is changed or
+    __systemd_dropins_result is changed
+
+- name: Ensure required units are started
+  systemd:
     name: "{{ item }}"
     state: started
-    enabled: true
-  loop: "{{ __template_services }}"
+  loop: "{{ systemd_started_units }}"
 
-- name: Generate /etc/{{ __template_foo_config }}
-  template:
-    src: "{{ __template_foo_config }}.j2"
-    dest: /etc/{{ __template_foo_config }}
-    backup: true
-    mode: 0400
-  notify: Handler for template to restart services
+- name: Ensure required units are stopped
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+  loop: "{{ systemd_stopped_units }}"
+
+- name: Ensure required units are restarted
+  systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ systemd_restarted_units }}"
+
+- name: Ensure required units are reloaded
+  systemd:
+    name: "{{ item }}"
+    state: reloaded
+  loop: "{{ systemd_reloaded_units }}"
+
+- name: Ensure required units are enabled
+  systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop: "{{ systemd_enabled_units }}"
+
+- name: Ensure required units are disabled
+  systemd:
+    name: "{{ item }}"
+    enabled: false
+  loop: "{{ systemd_disabled_units }}"
+
+- name: Ensure required units are masked
+  systemd:
+    name: "{{ item }}"
+    masked: true
+  loop: "{{ systemd_masked_units }}"
+
+- name: Ensure required units are unmasked
+  systemd:
+    name: "{{ item }}"
+    masked: false
+  loop: "{{ systemd_unmasked_units }}"
+
+- name: Gather systemd units state
+  systemd_units:
+  register: systemd_units

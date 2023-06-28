@@ -1,8 +1,13 @@
 # SPDX-License-Identifier: MIT
 ---
-# Here is the right place to put the role's input variables.
-# This file also serves as a documentation for such a variables.
-
-# Examples of role input variables:
-template_foo: foo
-template_bar: true
+systemd_unit_files: []
+systemd_unit_file_templates: []
+systemd_dropins: []
+systemd_started_units: []
+systemd_stopped_units: []
+systemd_restarted_units: []
+systemd_reloaded_units: []
+systemd_enabled_units: []
+systemd_disabled_units: []
+systemd_masked_units: []
+systemd_unmasked_units: []
