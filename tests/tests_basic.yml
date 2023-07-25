@@ -4,7 +4,8 @@
   name: Ensure that deploying unit files work correctly
   gather_facts: false
   vars:
-    systemd_unit_file_templates: ['foo.service']
+    systemd_unit_file_templates:
+      - foo.service.j2
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -16,7 +17,8 @@
   name: Ensure that deploying unit file dropins work correctly
   gather_facts: false
   vars:
-    systemd_dropins: ['foo.service.conf']
+    systemd_dropins:
+      - foo.service.conf.j2
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -38,7 +40,8 @@
   name: Ensure that we can start units using the role
   gather_facts: false
   vars:
-    systemd_started_units: ['foo.service']
+    systemd_started_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -58,7 +61,8 @@
   name: Ensure that we can restart units using the role
   gather_facts: false
   vars:
-    systemd_restarted_units: ['foo.service']
+    systemd_restarted_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   pre_tasks:
@@ -83,7 +87,8 @@
   name: Ensure that we can reload units
   gather_facts: false
   vars:
-    systemd_reloaded_units: ['foo.service']
+    systemd_reloaded_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   pre_tasks:
@@ -100,7 +105,8 @@
   name: Ensure that we can enable unit files
   gather_facts: false
   vars:
-    systemd_enabled_units: ['foo.service']
+    systemd_enabled_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   pre_tasks:
@@ -126,7 +132,8 @@
   name: Ensure that we can disable unit files
   gather_facts: false
   vars:
-    systemd_disabled_units: ['foo.service']
+    systemd_disabled_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -146,7 +153,8 @@
   gather_facts: false
   vars:
     # It is not possible to mask admin units files in /etc/systemd/system.
-    systemd_masked_units: ['sshd.service']
+    systemd_masked_units:
+      - sshd.service
   roles:
     - linux-system-roles.systemd
   pre_tasks:
@@ -174,7 +182,8 @@
   name: Ensure that we can unmask unit files
   gather_facts: false
   vars:
-    systemd_unmasked_units: ['sshd.service']
+    systemd_unmasked_units:
+      - sshd.service
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -193,7 +202,8 @@
   name: Ensure that we can stop units
   gather_facts: false
   vars:
-    systemd_stopped_units: ['foo.service']
+    systemd_stopped_units:
+      - foo.service
   roles:
     - linux-system-roles.systemd
   tasks:
