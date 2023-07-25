@@ -94,10 +94,14 @@ class SystemdUnitsFacts:
         self.module = module
 
     def units(self):
-        systemctl = self.module.get_bin_path("systemctl", opt_dirs=["/usr/bin", "/usr/local/bin"])
+        systemctl = self.module.get_bin_path(
+            "systemctl", opt_dirs=["/usr/bin", "/usr/local/bin"]
+        )
 
         units = {}
-        rc, stdout, stderr = self.module.run_command("%s list-units --no-pager --no-legend" % systemctl, use_unsafe_shell=True)
+        rc, stdout, stderr = self.module.run_command(
+            "%s list-units --no-pager --no-legend" % systemctl, use_unsafe_shell=True
+        )
         if rc != 0:
             self.module.warn("Could not list units: %s" % stderr)
             return {}
@@ -105,7 +109,13 @@ class SystemdUnitsFacts:
         for line in stdout.splitlines():
             f = line.split()
             if len(f) >= 5:
-                units[f[0]] = {"name": f[0], "load_state": f[1], "active_state": f[2], "sub_state": f[3], "description": " ".join(f[4:])}
+                units[f[0]] = {
+                    "name": f[0],
+                    "load_state": f[1],
+                    "active_state": f[2],
+                    "sub_state": f[3],
+                    "description": " ".join(f[4:]),
+                }
 
         return units
 
@@ -120,5 +130,5 @@ def main():
     module.exit_json(**results)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
