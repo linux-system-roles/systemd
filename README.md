@@ -1,5 +1,9 @@
 # systemd
 
+[![ansible-lint.yml](https://github.com/linux-system-roles/systemd/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/ansible-lint.yml) [![ansible-test.yml](https://github.com/linux-system-roles/systemd/actions/workflows/ansible-test.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/ansible-test.yml) [![codeql.yml](https://github.com/linux-system-roles/systemd/actions/workflows/codeql.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/codeql.yml) [![python-unit-test.yml](https://github.com/linux-system-roles/systemd/actions/workflows/python-unit-test.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/python-unit-test.yml) [![shellcheck.yml](https://github.com/linux-system-roles/systemd/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/shellcheck.yml) [![markdownlint.yml](https://github.com/linux-system-roles/systemd/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/markdownlint.yml) [![woke.yml](https://github.com/linux-system-roles/systemd/actions/workflows/woke.yml/badge.svg)](https://github.com/linux-system-roles/systemd/actions/workflows/woke.yml)
+
+---
+
 ![template](https://github.com/linux-system-roles/systemd/workflows/tox/badge.svg)
 
 Ansible role that can be used to deploy unit files and manage systemd units. Role is a convenience
