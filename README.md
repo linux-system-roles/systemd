@@ -18,16 +18,15 @@ List of systemd unit file names that should be deployed to managed nodes.
 ### systemd_unit_file_templates
 
 List of systemd unit file names that should be deployed to managed nodes. Each name should
-correspond to Jinja template file that will be templated out to managed nodes, e.g. for unit
-`foo.service` the respective `foo.service.j2` will be templated and copied over to managed
-nodes. If the local file has a `.j2` suffix it will be stripped to form the service name.
+correspond to Jinja template file that will be templated out to managed nodes. If the local
+file has a `.j2` suffix it will be stripped to form the service name.
 
 ### systemd_dropins
 
 List of systemd drop in files that will be templated out to managed hosts and will extend
 respective systemd unit files. Name of the unit file that given entry extends is encoded in
 the name of the entry itself. For example, for entry `foo.service.conf` it is expected that
-`foo.service.conf.j2` Jinja template exists and resulting dropin file will extend `foo.service`
+`foo.service.conf` Jinja template exists and resulting dropin file will extend `foo.service`
 unit file. If the local file has a `.j2` suffix it will be stripped to form the service
 name.
 
