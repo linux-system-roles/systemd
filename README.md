@@ -92,8 +92,8 @@ present on the managed host.
 - name: Deploy and start systemd unit
   hosts: all
   vars:
-    systemd_unit_files:
-      - foo.service
+    systemd_unit_file_templates:
+      - foo.service.j2
     systemd_started_units:
       - foo.service
     systemd_enabled_units:
