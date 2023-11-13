@@ -189,16 +189,14 @@ nodes.</p>
 <h2 id="systemd_unit_file_templates">systemd_unit_file_templates</h2>
 <p>List of systemd unit file names that should be deployed to managed
 nodes. Each name should correspond to Jinja template file that will be
-templated out to managed nodes, e.g. for unit <code>foo.service</code>
-the respective <code>foo.service.j2</code> will be templated and copied
-over to managed nodes. If the local file has a <code>.j2</code> suffix
-it will be stripped to form the service name.</p>
+templated out to managed nodes. If the local file has a <code>.j2</code>
+suffix it will be stripped to form the service name.</p>
 <h2 id="systemd_dropins">systemd_dropins</h2>
 <p>List of systemd drop in files that will be templated out to managed
 hosts and will extend respective systemd unit files. Name of the unit
 file that given entry extends is encoded in the name of the entry
 itself. For example, for entry <code>foo.service.conf</code> it is
-expected that <code>foo.service.conf.j2</code> Jinja template exists and
+expected that <code>foo.service.conf</code> Jinja template exists and
 resulting dropin file will extend <code>foo.service</code> unit file. If
 the local file has a <code>.j2</code> suffix it will be stripped to form
 the service name.</p>
@@ -238,14 +236,12 @@ Role</h1>
 <p>Variable shall contain a list of dictionaries where each entry
 describes state of one systemd unit present on the managed host.</p>
 <h1 id="example-playbook">Example Playbook</h1>
-<p>Including an example of how to use your role (for instance, with
-variables passed in as parameters) is always nice for users too:</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Deploy and start systemd unit</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">hosts</span><span class="kw">:</span><span class="at"> all</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">vars</span><span class="kw">:</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">systemd_unit_files</span><span class="kw">:</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> foo.service</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">systemd_unit_file_templates</span><span class="kw">:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> foo.service.j2</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">systemd_started_units</span><span class="kw">:</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> foo.service</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">systemd_enabled_units</span><span class="kw">:</span></span>
