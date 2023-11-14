@@ -7,6 +7,19 @@
 Ansible role that can be used to deploy unit files and manage systemd units. Role is a convenience
 wrapper around systemd and template Ansible Core modules.
 
+## Requirements
+
+See below
+
+### Collection requirements
+
+In order to manage `rpm-ostree` systems, the role requires modules from external
+collections.  Use the following command to install them:
+
+```bash
+ansible-galaxy collection install -vv -r meta/collection-requirements.yml
+```
+
 ## Role Variables
 
 List of variables consumed by the role follows, note that none of them is mandatory.
@@ -101,6 +114,10 @@ present on the managed host.
   roles:
     - linux-system-roles.systemd
 ```
+
+## rpm-ostree
+
+See README-ostree.md
 
 ## License
 
