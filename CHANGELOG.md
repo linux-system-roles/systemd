@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.1.0] - 2023-11-29
+--------------------
+
+### New Features
+
+- feat: support for ostree systems (#29)
+
+### Other Changes
+
+- build(deps): Bump actions/checkout from 3 to 4 (#19)
+- ci: ensure dependabot git commit message conforms to commitlint (#22)
+- docs: Docs fixes (#28)
+
 [1.0.2] - 2023-09-08
 --------------------
 
