@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 ---
-- hosts: all
-  name: Ensure that deploying unit files work correctly
+- name: Ensure that deploying unit files work correctly
+  hosts: all
   gather_facts: false
   vars:
     systemd_unit_file_templates:
@@ -13,8 +13,8 @@
       stat:
         path: /etc/systemd/system/foo.service
 
-- hosts: all
-  name: Ensure that deploying unit file dropins work correctly
+- name: Ensure that deploying unit file dropins work correctly
+  hosts: all
   gather_facts: false
   vars:
     systemd_dropins:
@@ -36,8 +36,8 @@
       stat:
         path: /etc/systemd/system/foo.service.d/99-override.conf
 
-- hosts: all
-  name: Ensure that we can start units using the role
+- name: Ensure that we can start units using the role
+  hosts: all
   gather_facts: false
   vars:
     systemd_started_units:
@@ -57,8 +57,8 @@
             ['foo.service']
             ['sub_state'] == "running"
 
-- hosts: all
-  name: Ensure that we can restart units using the role
+- name: Ensure that we can restart units using the role
+  hosts: all
   gather_facts: false
   vars:
     systemd_restarted_units:
@@ -83,8 +83,8 @@
         that:
           - pid_before_restart.stdout != pid_after_restart.stdout
 
-- hosts: all
-  name: Ensure that we can reload units
+- name: Ensure that we can reload units
+  hosts: all
   gather_facts: false
   vars:
     systemd_reloaded_units:
@@ -101,8 +101,8 @@
       stat:
         path: /tmp/foo-service-reloaded
 
-- hosts: all
-  name: Ensure that we can enable unit files
+- name: Ensure that we can enable unit files
+  hosts: all
   gather_facts: false
   vars:
     systemd_enabled_units:
@@ -128,8 +128,8 @@
           - unit_file_state_before.stdout == "UnitFileState=disabled"
           - unit_file_state_after.stdout == "UnitFileState=enabled"
 
-- hosts: all
-  name: Ensure that we can disable unit files
+- name: Ensure that we can disable unit files
+  hosts: all
   gather_facts: false
   vars:
     systemd_disabled_units:
@@ -148,8 +148,8 @@
         that:
           - unit_file_state_now.stdout == "UnitFileState=disabled"
 
-- hosts: all
-  name: Ensure that we can mask unit files
+- name: Ensure that we can mask unit files
+  hosts: all
   gather_facts: false
   vars:
     # It is not possible to mask admin units files in /etc/systemd/system.
@@ -178,8 +178,8 @@
             sshd_state_after.stdout == "UnitFileState=masked" or
             sshd_state_after.stdout == "UnitFileState=bad"
 
-- hosts: all
-  name: Ensure that we can unmask unit files
+- name: Ensure that we can unmask unit files
+  hosts: all
   gather_facts: false
   vars:
     systemd_unmasked_units:
@@ -198,8 +198,8 @@
         that:
           - sshd_state_now.stdout == "UnitFileState=enabled"
 
-- hosts: all
-  name: Ensure that we can stop units
+- name: Ensure that we can stop units
+  hosts: all
   gather_facts: false
   vars:
     systemd_stopped_units:
