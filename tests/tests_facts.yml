@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 ---
-- hosts: all
-  name: Ensure that basic features of role work correctly
+- name: Ensure that basic features of role work correctly
+  hosts: all
   roles:
     - linux-system-roles.systemd
   tasks:
