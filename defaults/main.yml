@@ -11,3 +11,4 @@ systemd_enabled_units: []
 systemd_disabled_units: []
 systemd_masked_units: []
 systemd_unmasked_units: []
+systemd_transactional_update_reboot_ok: null
