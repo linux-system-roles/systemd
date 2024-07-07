@@ -12,12 +12,47 @@
       set_fact:
         __systemd_is_ostree: "{{ __ostree_booted_stat.stat.exists }}"
 
+- name: Determine if system is transactional update and set flag
+  when: not __systemd_is_transactional is defined
+  block:
+    - name: Check if transactional-update exists in /sbin
+      stat:
+        path: /sbin/transactional-update
+      register: __transactional_update_stat
+
+    - name: Set flag if transactional-update exists
+      set_fact:
+        __systemd_is_transactional: "{{ __transactional_update_stat.stat.exists }}"
+
 - name: Ensure required packages are installed
   package:
     name: "{{ __systemd_packages }}"
     state: present
     use: "{{ (__systemd_is_ostree | d(false)) |
               ternary('ansible.posix.rhel_rpm_ostree', omit) }}"
+  register: systemd_package_result
+
+- name: Handle reboot for transactional update systems
+  when:
+    - __systemd_is_transactional | d(false)
+    - systemd_package_result is changed
+  block:
+    - name: Notify user that reboot is needed to apply changes
+      debug:
+        msg: >
+          Reboot required to apply changes due to transactional updates.
+
+    - name: Reboot transactional update systems
+      reboot:
+        msg: Rebooting the system to apply transactional update changes.
+      when: systemd_transactional_update_reboot_ok | bool
+
+    - name: Fail if reboot is needed and not set
+      fail:
+        msg: >
+          Reboot is required but not allowed. Please set 'systemd_transactional_update_reboot_ok' to proceed.
+      when:
+        - systemd_transactional_update_reboot_ok is none
 
 - name: Deploy unit files
   copy:
