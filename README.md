@@ -75,7 +75,6 @@ List of unit files that shall be masked via systemd.
 
 List of unit files that shall be unmasked via systemd.
 
-
 ### systemd_transactional_update_reboot_ok
 
 This variable is used to handle reboots required by transactional updates. If a transactional update requires a reboot, the role will proceed with the reboot if systemd_transactional_update_reboot_ok is set to true. If set to false, the role will notify the user that a reboot is required, allowing for custom handling of the reboot requirement. If this variable is not set, the role will fail to ensure the reboot requirement is not overlooked.
