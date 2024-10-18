@@ -1,10 +1,5 @@
-# SPDX-License-Identifier: MIT
+# vars for handling conditionals for RedHat and clones
 ---
-__systemd_packages:
-  - systemd
-__admin_units_dir: /etc/systemd/system
-
-# BEGIN redhat distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __systemd_rh_distros:
   - AlmaLinux
@@ -16,7 +11,5 @@ __systemd_rh_distros:
 __systemd_rh_distros_fedora: "{{ __systemd_rh_distros + ['Fedora'] }}"
 # Use this in conditionals to check if distro is Red Hat or clone
 __systemd_is_rh_distro: "{{ ansible_distribution in __systemd_rh_distros }}"
-
 # Use this in conditionals to check if distro is Red Hat or clone, or Fedora
 __systemd_is_rh_distro_fedora: "{{ ansible_distribution in __systemd_rh_distros_fedora }}"
-# END redhat distros variables
