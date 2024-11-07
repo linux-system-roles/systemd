@@ -4,6 +4,15 @@ __systemd_packages:
   - systemd
 __admin_units_dir: /etc/systemd/system
 
+# relative to xdg config dir/home dir
+__user_units_dir: .config/systemd/user
+
+# convenience for checking units
+__systemd_all_units: "{{ systemd_unit_files + systemd_unit_file_templates +
+  systemd_dropins + systemd_started_units + systemd_stopped_units +
+  systemd_restarted_units + systemd_reloaded_units + systemd_enabled_units +
+  systemd_disabled_units + systemd_masked_units + systemd_unmasked_units }}"
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __systemd_rh_distros:

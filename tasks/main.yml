@@ -1,5 +1,44 @@
 # SPDX-License-Identifier: MIT
 ---
+- name: Ensure ansible_facts used by role
+  setup:
+    gather_subset: "{{ __required_facts }}"
+  when: __required_facts | difference(ansible_facts.keys() | list) |
+    length > 0
+  vars:
+    __required_facts:
+      - distribution
+      - distribution_major_version
+      - os_family
+
+- name: Support for user units only available in EL7 and later
+  fail:
+    msg: >
+      User units not supported for {{ ansible_facts["distribution"] }} version
+      {{ ansible_facts["distribution_major_version"] }} - support is only
+      available on EL8 and later
+  when:
+    - ansible_facts["os_family"] == "RedHat"
+    - ansible_facts["distribution_major_version"] is version("8", "<")
+    - __has_user_units | bool
+    - systemd_fail_if_too_old | bool
+  vars:
+    __has_user_units: "{{ __systemd_all_units | select('mapping') |
+      selectattr('user', 'defined') | rejectattr('user', 'match', '^root$') |
+      list | length > 0 }}"
+
+- name: Support for user units only available in EL7 and later
+  meta: end_host
+  when:
+    - ansible_facts["os_family"] == "RedHat"
+    - ansible_facts["distribution_major_version"] is version("8", "<")
+    - __has_user_units | bool
+    - not systemd_fail_if_too_old
+  vars:
+    __has_user_units: "{{ __systemd_all_units | select('mapping') |
+      selectattr('user', 'defined') | rejectattr('user', 'match', '^root$') |
+      list | length > 0 }}"
+
 - name: Determine if system is ostree and set flag
   when: not __systemd_is_ostree is defined
   block:
@@ -54,109 +93,87 @@
       when:
         - systemd_transactional_update_reboot_ok is none
 
-- name: Deploy unit files
-  copy:
-    src: "{{ item }}"
-    dest: "{{ __admin_units_dir }}/{{ item }}"
-    owner: root
-    group: root
-    mode: '0644'
-  loop: "{{ systemd_unit_files }}"
-  register: __systemd_unit_files_result
+- name: Reset __systemd_user_info
+  set_fact:
+    __systemd_user_info: {}
 
-- name: Deploy unit file templates
-  template:
-    src: "{{ item }}"
-    dest: "{{ __admin_units_dir }}/{{ __dest }}"
-    owner: root
-    group: root
-    mode: '0644'
-  loop: "{{ systemd_unit_file_templates }}"
-  register: __systemd_unit_file_templates_result
+- name: Manage files and templates and their directories
+  include_tasks: manage_unit_files.yml
   vars:
-    __dest: "{{ item | regex_replace('[.]j2$', '') }}"
+    __systemd_list_name: "{{ managed_unit_files }}"
+  loop_control:
+    loop_var: managed_unit_files
+  loop:
+    - systemd_unit_files
+    - systemd_unit_file_templates
+    - systemd_dropins
 
-- name: Create drop-in directories
-  file:
-    path: "{{ __admin_units_dir }}/{{ '.'.join(__dest.split('.')[:-1]) }}.d/"
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-  loop: "{{ systemd_dropins }}"
-  vars:
-    __dest: "{{ item | regex_replace('[.]j2$', '') }}"
-
-- name: Deploy systemd drop in config
-  template:
-    src: "{{ item }}"
-    dest: "{{ __admin_units_dir }}/\
-     {{ '.'.join(__dest.split('.')[:-1]) }}.d/\
-     99-override.conf"
-    owner: root
-    group: root
-    mode: '0644'
-  loop: "{{ systemd_dropins }}"
-  register: __systemd_dropins_result
-  vars:
-    __dest: "{{ item | regex_replace('[.]j2$', '') }}"
-
+# handle reload for system and users that had changed files
 - name: Reload systemd
   systemd:
     daemon_reload: true
-  when: >
-    __systemd_unit_files_result is changed or
-    __systemd_unit_file_templates_result is changed or
-    __systemd_dropins_result is changed
+    scope: "{{ 'system' if item == 'root' else 'user' }}"
+  loop: "{{ __users_with_changes }}"
+  become: "{{ item != 'root' }}"
+  become_user: "{{ item if item != 'root' else omit }}"
+  environment:
+    XDG_RUNTIME_DIR: "{{ __systemd_user_info[item]['xdg_dir'] }}"
+  vars:
+    all_results: "{{ __systemd_unit_files_result.get('results', []) +
+      __systemd_unit_file_templates_result.get('results', []) +
+      __systemd_unit_files_absent_result.get('results', []) }}"
+    __users_with_changes: "{{ all_results | selectattr('changed', 'defined') |
+      selectattr('changed') | map(attribute='invocation') |
+      map(attribute='module_args') | map(attribute='owner') | unique | list }}"
 
-- name: Ensure required units are started
-  systemd:
-    name: "{{ item }}"
-    state: started
-  loop: "{{ systemd_started_units }}"
+- name: Manage units
+  include_tasks: manage_units.yml
+  vars:
+    __systemd_list_name: "{{ managed_units.name }}"
+    __systemd_state: "{{ managed_units.state | d('') }}"
+    __systemd_enabled: "{{ managed_units.enabled | d('') }}"
+    __systemd_masked: "{{ managed_units.masked | d('') }}"
+  loop_control:
+    loop_var: managed_units
+  loop:
+    - name: systemd_started_units
+      state: started
+    - name: systemd_stopped_units
+      state: stopped
+    - name: systemd_restarted_units
+      state: restarted
+    - name: systemd_reloaded_units
+      state: reloaded
+    - name: systemd_enabled_units
+      enabled: "true"
+    - name: systemd_disabled_units
+      enabled: "false"
+    - name: systemd_masked_units
+      masked: "true"
+    - name: systemd_unmasked_units
+      masked: "false"
 
-- name: Ensure required units are stopped
-  systemd:
-    name: "{{ item }}"
-    state: stopped
-  loop: "{{ systemd_stopped_units }}"
+- name: DebugBefore
+  debug:
+    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
 
-- name: Ensure required units are restarted
-  systemd:
-    name: "{{ item }}"
-    state: restarted
-  loop: "{{ systemd_restarted_units }}"
+- name: Gather systemd units state for system and user units
+  include_tasks: get_systemd_units_info.yml
+  loop: "{{ __user_info | dict2items }}"
+  loop_control:
+    loop_var: __systemd_units_info
+  vars:
+    __user_info: "{{ __systemd_user_info if __systemd_user_info.keys() | length > 0
+      else {'root': {'xdg_dir': '/run/user/0'}} }}"
 
-- name: Ensure required units are reloaded
-  systemd:
-    name: "{{ item }}"
-    state: reloaded
-  loop: "{{ systemd_reloaded_units }}"
+- name: DebugAfter
+  debug:
+    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
 
-- name: Ensure required units are enabled
-  systemd:
-    name: "{{ item }}"
-    enabled: true
-  loop: "{{ systemd_enabled_units }}"
+- name: Set legacy systemd_units output variable
+  set_fact:
+    systemd_units: "{{ ansible_facts['systemd_units']
+      if 'systemd_units' in ansible_facts else {} }}"
 
-- name: Ensure required units are disabled
-  systemd:
-    name: "{{ item }}"
-    enabled: false
-  loop: "{{ systemd_disabled_units }}"
-
-- name: Ensure required units are masked
-  systemd:
-    name: "{{ item }}"
-    masked: true
-  loop: "{{ systemd_masked_units }}"
-
-- name: Ensure required units are unmasked
-  systemd:
-    name: "{{ item }}"
-    masked: false
-  loop: "{{ systemd_unmasked_units }}"
-
-- name: Gather systemd units state
-  systemd_units:
-  register: systemd_units
+- name: Cancel linger for users if necessary
+  include_tasks: cancel_linger.yml

@@ -1,5 +1,12 @@
 # SPDX-License-Identifier: MIT
 ---
+# These can either be lists of strings, which are the names of files, units, etc.
+# or a list of dict
+# the dict can have the following fields
+# item: name of file, template, unit, etc.
+# user: root for system units, or user for user units
+#       if no user is given, root is used
+# state: default is present - use absent to remove unit files
 systemd_unit_files: []
 systemd_unit_file_templates: []
 systemd_dropins: []
@@ -11,4 +18,10 @@ systemd_enabled_units: []
 systemd_disabled_units: []
 systemd_masked_units: []
 systemd_unmasked_units: []
+
+# This only applies to transactional update systems
 systemd_transactional_update_reboot_ok: null
+
+# fail the role if there is an attempt to use a feature
+# not supported by the version of systemd
+systemd_fail_if_too_old: true

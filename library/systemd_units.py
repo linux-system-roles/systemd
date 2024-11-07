@@ -31,7 +31,15 @@ short_description: Return systemd units status as fact data
 requirements: [systemd]
 description:
   - This module gathers state of systemd units and exposes it as facts data
-options: {}
+options:
+  user:
+    description: user name
+    type: str
+    required: true
+  user_facts:
+    description: getent facts about user
+    type: dict
+    required: true
 """
 
 RETURN = r"""
@@ -97,10 +105,15 @@ class SystemdUnitsFacts:
         systemctl = self.module.get_bin_path(
             "systemctl", opt_dirs=["/usr/bin", "/usr/local/bin"]
         )
+        if self.module.params["user"] == "root":
+            flag = "--system"
+        else:
+            flag = "--user"
 
         units = {}
         rc, stdout, stderr = self.module.run_command(
-            "%s list-units --no-pager --no-legend" % systemctl, use_unsafe_shell=True
+            "%s %s list-units --no-pager --no-legend" % (systemctl, flag),
+            use_unsafe_shell=True,
         )
         if rc != 0:
             self.module.warn("Could not list units: %s" % stderr)
@@ -121,12 +134,24 @@ class SystemdUnitsFacts:
 
 
 def main():
-    module = AnsibleModule(argument_spec={}, supports_check_mode=True)
+    argument_spec = dict(
+        user=dict(type="str", required=True),
+        user_facts=dict(type="dict", required=True),
+    )
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
     systemd_facts_module = SystemdUnitsFacts(module)
 
     units = systemd_facts_module.units()
+    user = module.params["user"]
+    user_facts = module.params["user_facts"]
+    # module.log("user [%s] user_facts %s" % (user, user_facts))
+    user_facts[user] = units
+    facts = {"systemd_units_user": user_facts}
+    if user == "root":
+        # add the legacy fact
+        facts.update({"systemd_units": units})
 
-    results = dict(ansible_facts={"systemd_units": units})
+    results = dict(ansible_facts=facts)
     module.exit_json(**results)
 
 
