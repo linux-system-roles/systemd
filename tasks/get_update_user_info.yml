@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_user_name
+# Outputs:
+#   __systemd_user_info updated with getent info from user
+---
+- name: Get user information
+  getent:
+    database: passwd
+    key: "{{ __systemd_user_name }}"
+    fail_key: true
+  when: "'getent_passwd' not in ansible_facts or
+    __systemd_user_name not in ansible_facts['getent_passwd']"
+
+- name: Update systemd user info with new user info
+  when: __systemd_user_name not in __systemd_user_info
+  set_fact:
+    __systemd_user_info: |
+      {% set getent = ansible_facts["getent_passwd"][__systemd_user_name] %}
+      {% set rv = __systemd_user_info | d({}) %}
+      {% if __systemd_user_name not in rv %}
+      {%   set _ = rv.__setitem__(__systemd_user_name, {}) %}
+      {% endif %}
+      {% if "xdg_dir" not in rv[__systemd_user_name] %}
+      {%   set xdg_dir = "/run/user/" ~ getent[1] %}
+      {%   set _ = rv[__systemd_user_name].update({"xdg_dir": xdg_dir}) %}
+      {% endif %}
+      {% if "units_dir" not in rv[__systemd_user_name] %}
+      {%   if __systemd_user_name == "root" %}
+      {%     set _ = rv[__systemd_user_name].update({"units_dir": __admin_units_dir}) %}
+      {%   else %}
+      {%     set units_dir = getent[4] ~ '/' ~ __user_units_dir %}
+      {%     set _ = rv[__systemd_user_name].update({"units_dir": units_dir}) %}
+      {%   endif %}
+      {% endif %}
+      {% if "group" not in rv[__systemd_user_name] %}
+      {%   set group = getent[2] %}
+      {%   set _ = rv[__systemd_user_name].update({"group": group}) %}
+      {% endif %}
+      {{ rv }}

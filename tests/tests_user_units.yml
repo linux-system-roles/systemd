@@ -1,0 +1,250 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Ensure that the role works with a mix of user and system units
+  hosts: all
+  gather_facts: false
+  vars:
+    systemd_fail_if_too_old: false  # allow test to pass on el7
+    __users:
+      - name: systemd_user1
+        uid: 5411
+      - name: systemd_user2
+        uid: 5412
+    __all_units:
+      - user: "{{ __users[0].name }}"
+        item: bar.service
+      - user: root
+        item: bar.service
+      - user: "{{ __users[1].name }}"
+        item: bar.service
+      - user: "{{ __users[0].name }}"
+        item: foo.service
+      - user: root
+        item: foo.service
+      - user: "{{ __users[1].name }}"
+        item: foo.service
+    __systemd_unit_files:
+      - user: "{{ __users[0].name }}"
+        item: bar.service
+      - user: root
+        item: bar.service
+      - user: "{{ __users[1].name }}"
+        item: bar.service
+    __systemd_unit_file_templates:
+      - user: "{{ __users[0].name }}"
+        item: foo.service.j2
+      - user: root
+        item: foo.service.j2
+      - user: "{{ __users[1].name }}"
+        item: foo.service.j2
+    __systemd_dropins:
+      - user: "{{ __users[0].name }}"
+        item: foo.service.conf.j2
+      - user: root
+        item: foo.service.conf.j2
+      - user: "{{ __users[1].name }}"
+        item: foo.service.conf.j2
+    __systemd_started_units: "{{ __all_units }}"
+    __systemd_stopped_units: "{{ __all_units }}"
+    __systemd_restarted_units: "{{ __all_units }}"
+    __systemd_reloaded_units: "{{ __all_units }}"
+    __systemd_enabled_units: "{{ __all_units }}"
+    __systemd_disabled_units: "{{ __all_units }}"
+    __systemd_masked_units: "{{ __all_units }}"
+    __systemd_unmasked_units: "{{ __all_units }}"
+  tasks:
+    - name: Run tests
+      block:
+        - name: Create users
+          user:
+            name: "{{ item.name }}"
+            uid: "{{ item.uid }}"
+          loop: "{{ __users }}"
+
+        - name: Run role to create and start units
+          include_role:
+            name: linux-system-roles.systemd
+            public: true
+          vars:
+            systemd_unit_files: "{{ __systemd_unit_files }}"
+            systemd_unit_file_templates: "{{ __systemd_unit_file_templates }}"
+            systemd_dropins: "{{ __systemd_dropins }}"
+            systemd_started_units: "{{ __systemd_started_units }}"
+
+        - name: Verify units are present and started
+          assert:
+            that:
+              - >-
+                ansible_facts["systemd_units_user"][item.user]
+                [item.item]
+                ["active_state"] == "active"
+              - >-
+                ansible_facts["systemd_units_user"][item.user]
+                [item.item]
+                ["sub_state"] == "running"
+          loop: "{{ __all_units }}"
+
+        - name: Verify files are present
+          stat:
+            path: "{{ __units_dir }}/{{ item.item }}"
+          register: __stat
+          failed_when: not __stat.stat.exists
+          loop: "{{ __systemd_unit_files }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+
+        - name: Verify template files are present
+          stat:
+            path: "{{ __units_dir ~ '/' ~ __dest }}"
+          register: __stat
+          failed_when: not __stat.stat.exists
+          loop: "{{ __systemd_unit_file_templates }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+
+        - name: Verify dropin files are present
+          stat:
+            path: "{{ __path }}"
+          register: __stat
+          failed_when: not __stat.stat.exists
+          loop: "{{ __systemd_dropins }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __path: "{{ __units_dir }}/\
+              {{ '.'.join(__dest.split('.')[:-1]) }}.d/\
+              99-override.conf"
+
+        - name: Get unit file state of units before
+          # noqa command-instead-of-module
+          command: systemctl {{ scope }} show -p UnitFileState {{ item.item }}
+          changed_when: false
+          register: __before_state
+          loop: "{{ __all_units }}"
+          failed_when: __before_state.stdout != "UnitFileState=disabled"
+          become: "{{ item.user != 'root' }}"
+          become_user: "{{ item.user if item.user != 'root' else omit }}"
+          environment:
+            XDG_RUNTIME_DIR: "{{ __systemd_user_info[item.user]['xdg_dir'] }}"
+          vars:
+            scope: "{{ '--system' if item.user == 'root' else '--user' }}"
+
+        - name: Run role to enable units
+          include_role:
+            name: linux-system-roles.systemd
+          vars:
+            systemd_enabled_units: "{{ __systemd_enabled_units }}"
+
+        - name: Get unit file state of units after
+          # noqa command-instead-of-module
+          command: systemctl {{ scope }} show -p UnitFileState {{ item.item }}
+          changed_when: false
+          register: __after_state
+          loop: "{{ __all_units }}"
+          failed_when: __after_state.stdout != "UnitFileState=enabled"
+          become: "{{ item.user != 'root' }}"
+          become_user: "{{ item.user if item.user != 'root' else omit }}"
+          environment:
+            XDG_RUNTIME_DIR: "{{ __systemd_user_info[item.user]['xdg_dir'] }}"
+          vars:
+            scope: "{{ '--system' if item.user == 'root' else '--user' }}"
+
+        - name: Run role to disable units
+          include_role:
+            name: linux-system-roles.systemd
+          vars:
+            systemd_disabled_units: "{{ __systemd_disabled_units }}"
+
+        - name: Get unit file state of units after
+          # noqa command-instead-of-module
+          command: systemctl {{ scope }} show -p UnitFileState {{ item.item }}
+          changed_when: false
+          register: __after_state
+          loop: "{{ __all_units }}"
+          failed_when: __after_state.stdout != "UnitFileState=disabled"
+          become: "{{ item.user != 'root' }}"
+          become_user: "{{ item.user if item.user != 'root' else omit }}"
+          environment:
+            XDG_RUNTIME_DIR: "{{ __systemd_user_info[item.user]['xdg_dir'] }}"
+          vars:
+            scope: "{{ '--system' if item.user == 'root' else '--user' }}"
+
+        - name: Run role to stop units
+          include_role:
+            name: linux-system-roles.systemd
+          vars:
+            systemd_stopped_units: "{{ __systemd_stopped_units }}"
+
+        - name: Verify units are absent
+          assert:
+            that: item.item not in ansible_facts["systemd_units_user"][item.user]
+          loop: "{{ __all_units }}"
+
+        - name: Run role to remove unit files and dropins
+          include_role:
+            name: linux-system-roles.systemd
+            public: true
+          vars:
+            systemd_unit_files: "{{ __systemd_unit_files |
+              map('combine', __absent) | list }}"
+            systemd_unit_file_templates: "{{ __systemd_unit_file_templates |
+              map('combine', __absent) | list }}"
+            systemd_dropins: "{{ __systemd_dropins |
+              map('combine', __absent) | list }}"
+            systemd_started_units: []
+            __absent:
+              state: absent
+
+        - name: Verify files are absent
+          stat:
+            path: "{{ __units_dir }}/{{ item.item }}"
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __systemd_unit_files }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+
+        - name: Verify template files are absent
+          stat:
+            path: "{{ __units_dir ~ '/' ~ __dest }}"
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __systemd_unit_file_templates }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+
+        - name: Verify dropin files are absent
+          stat:
+            path: "{{ __path }}"
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __systemd_dropins }}"
+          vars:
+            __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
+            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __path: "{{ __units_dir }}/\
+              {{ '.'.join(__dest.split('.')[:-1]) }}.d/\
+              99-override.conf"
+
+        - name: Verify no lingering
+          stat:
+            path: /var/lib/systemd/linger/{{ item.name }}
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __users }}"
+
+      rescue:
+        - name: Get journald information
+          command: journalctl -ex
+          failed_when: true
+          changed_when: false
+
+      always:
+        - name: Remove users
+          user:
+            name: "{{ item.name }}"
+            uid: "{{ item.uid }}"
+            state: absent
+          loop: "{{ __users }}"

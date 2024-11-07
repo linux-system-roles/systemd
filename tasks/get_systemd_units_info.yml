@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_units_info
+# Outputs:
+#   ansible_facts
+---
+- name: Gather systemd units state for system and user units
+  systemd_units:
+    user: "{{ __systemd_units_info.key }}"
+    user_facts: "{{ ansible_facts['systemd_units_user'] | d({}) }}"
+  become: "{{ __systemd_units_info.key != 'root' }}"
+  become_user: "{{ __systemd_units_info.key if __systemd_units_info.key != 'root'
+    else omit }}"
+  environment:
+    XDG_RUNTIME_DIR: "{{ __systemd_units_info.value['xdg_dir'] }}"

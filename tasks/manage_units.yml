@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_list_name - name of variable to use for operation
+#   __systemd_state - setting for state or omit if absent
+#   __systemd_enabled - setting for enabled or omit if absent
+#   __systemd_masked - setting for masked or omit if absent
+---
+- name: Manage units
+  when:
+    - __systemd_list_name in __list_names
+    - __systemd_list | length > 0
+  vars:
+    __systemd_list: "{{ lookup('vars', __systemd_list_name) }}"
+    __list_names:
+      - systemd_started_units
+      - systemd_stopped_units
+      - systemd_restarted_units
+      - systemd_reloaded_units
+      - systemd_enabled_units
+      - systemd_disabled_units
+      - systemd_masked_units
+      - systemd_unmasked_units
+  block:
+    # this uses __systemd_list set above
+    - name: Manage user info
+      include_tasks: manage_user_info.yml
+
+    - name: Ensure required units in correct state
+      systemd:
+        name: "{{ item.item }}"
+        state: "{{ __systemd_state if __systemd_state | length > 0 else omit }}"
+        enabled: "{{ __systemd_enabled | bool if __systemd_enabled | length > 0 else omit }}"
+        masked: "{{ __systemd_masked | bool if __systemd_masked | length > 0 else omit }}"
+        scope: "{{ 'system' if item.user == 'root' else 'user' }}"
+      loop: "{{ __systemd_dict_list }}"
+      become: "{{ item.user != 'root' }}"
+      become_user: "{{ item.user if item.user != 'root' else omit }}"
+      environment:
+        XDG_RUNTIME_DIR: "{{ item.xdg_dir }}"

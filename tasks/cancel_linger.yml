@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_user_info
+---
+- name: Check if linger for users can be cancelled
+  vars:
+    __systemd_linger_users: "{{ __systemd_user_info | dict2items |
+      rejectattr('key', 'match', '^root$') | list }}"
+  when: __systemd_linger_users | length > 0
+  block:
+    - name: Cancel linger for given user
+      include_tasks: cancel_linger_for_user.yml
+      vars:
+        __systemd_linger_data: "{{ __systemd_linger_user_data.value }}"
+        __systemd_linger_user: "{{ __systemd_linger_user_data.key }}"
+      loop: "{{ __systemd_linger_users }}"
+      loop_control:
+        loop_var: __systemd_linger_user_data

@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_list_name - name of variable to use for operation
+---
+- name: Manage unit files, templates, and directories
+  when:
+    - __systemd_list_name in __list_names
+    - __systemd_list | length > 0
+  vars:
+    __systemd_list: "{{ lookup('vars', __systemd_list_name) }}"
+    __list_names:
+      - systemd_unit_files
+      - systemd_unit_file_templates
+      - systemd_dropins
+  block:
+    # this uses __systemd_list set above
+    - name: Manage user info
+      include_tasks: manage_user_info.yml
+
+    - name: Manage files and templates
+      when: __systemd_dict_list | length > 0
+      vars:
+        __unit: "{{ item.item | regex_replace('[.]j2$', '')
+          if __systemd_list_name in ['systemd_unit_file_templates', 'systemd_dropins']
+          else item.item }}"
+        __file: "{{ '99-override.conf' if __systemd_list_name == 'systemd_dropins'
+          else __unit }}"
+        __path: "{{ item.units_dir ~ '/' ~ '.'.join(__unit.split('.')[:-1]) ~ '.d'
+          if __systemd_list_name == 'systemd_dropins'
+          else item.units_dir }}"
+        __systemd_present: "{{ __systemd_dict_list | selectattr('state', 'match', '^present$') |
+          list }}"
+        __systemd_absent: "{{ __systemd_dict_list | selectattr('state', 'match', '^absent$') |
+          list }}"
+      block:
+        - name: Ensure directories are present for users
+          file:
+            path: "{{ __path }}"
+            owner: "{{ item.user }}"
+            state: directory
+            mode: "{{ item.dir_mode }}"
+          loop: "{{ __systemd_present | rejectattr('user', 'match', '^root$') | list }}"
+
+        - name: Ensure directories are present for dropins
+          file:
+            path: "{{ __path }}"
+            owner: "{{ item.user }}"
+            state: directory
+            mode: "{{ item.dir_mode }}"
+          when: __systemd_list_name == "systemd_dropins"
+          loop: "{{ __systemd_present }}"
+
+        - name: Ensure unit files are present
+          copy:
+            src: "{{ item.item }}"
+            dest: "{{ __path }}/{{ __file }}"
+            owner: "{{ item.user }}"
+            group: "{{ item.group }}"
+            mode: "{{ item.mode }}"
+          when: __systemd_list_name == "systemd_unit_files"
+          loop: "{{ __systemd_present }}"
+          register: __systemd_unit_files_result
+
+        - name: Ensure unit file templates are present
+          template:
+            src: "{{ item.item }}"
+            dest: "{{ __path }}/{{ __file }}"
+            owner: "{{ item.user }}"
+            group: "{{ item.group }}"
+            mode: "{{ item.mode }}"
+          when: __systemd_list_name != "systemd_unit_files"
+          loop: "{{ __systemd_present }}"
+          register: __systemd_unit_file_templates_result
+
+        - name: Ensure unit files are absent
+          file:
+            path: "{{ __path }}/{{ __file }}"
+            state: absent
+            owner: "{{ item.user }}"  # only needed for daemon_reload which happens later
+          loop: "{{ __systemd_absent }}"
+          register: __systemd_unit_files_absent_result
+
+        - name: Find files in dropins directory
+          find:
+            path: "{{ __path }}"
+          loop: "{{ __systemd_absent }}"
+          when: __systemd_list_name == "systemd_dropins"
+          register: __systemd_find
+
+        - name: Remove dropin directory if no more files
+          file:
+            path: "{{ item['invocation']['module_args']['path'] }}"
+            state: absent
+          loop: "{{ __systemd_find.results | d([]) }}"
+          when:
+            - __systemd_list_name == "systemd_dropins"
+            - item.matched == 0

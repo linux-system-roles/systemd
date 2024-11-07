@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: MIT
+# convert the given list which is either a list of scalar values or
+# a list of dict to a list of dict
+# if the given list has users, look up those users with getent
+# the returned list of dict will have fields for xdg_dir
+# and units_dir which may be user specific
+# Input:
+# __systemd_list - either a list of strings or a list of dicts
+# Output:
+# __systemd_user_info - dict mapping user name to xdg_dir
+# and units_dir for that user - which may be root
+# __systemd_dict_list - list of dict - each dict will have the
+# following fields:
+# item - the given item from the input list
+# user - the user from the input list, or "root"
+# state - the state from the input list, or "present"
+# xdg_dir - the XDG runtime dir for the user
+# units_dir - where to put the systemd unit files - user or system dir
+---
+- name: Manage user info and units list
+  when: __systemd_list | length > 0
+  vars:
+    __systemd_user_list: "{{ ((__systemd_list | select('mapping') |
+      selectattr('user', 'defined') | map(attribute='user') | list) +
+      ['root']) | unique | list }}"
+  block:
+    # extract user data from the systemd_unit lists, and look up
+    # user data using getent
+    - name: Get user information
+      include_tasks: get_update_user_info.yml
+      loop: "{{ __systemd_user_list }}"
+      loop_control:
+        loop_var: __systemd_user_name
+
+    # convert to the output format
+    - name: Convert to list of dict with user data
+      set_fact:
+        __systemd_dict_list: |
+          {% set rv = [] %}
+          {% for item in __systemd_list %}
+          {%   set newitem = {} %}
+          {%   if item is mapping %}
+          {%     set _ = newitem.update(item) %}
+          {%   else %}
+          {%     set _ = newitem.update({"item": item}) %}
+          {%   endif %}
+          {%   if "state" not in newitem %}
+          {%     set _ = newitem.update({"state": "present"}) %}
+          {%   endif %}
+          {%   if "user" not in newitem %}
+          {%     set _ = newitem.update({"user": "root"}) %}
+          {%   endif %}
+          {%   set user = newitem["user"] %}
+          {%   if "group" not in newitem %}
+          {%     set _ = newitem.update({"group": __systemd_user_info[user]["group"]}) %}
+          {%   endif %}
+          {%   if "xdg_dir" not in newitem %}
+          {%     set _ = newitem.update({"xdg_dir": __systemd_user_info[user]["xdg_dir"]}) %}
+          {%   endif %}
+          {%   if "units_dir" not in newitem %}
+          {%     set _ = newitem.update({"units_dir": __systemd_user_info[user]["units_dir"]}) %}
+          {%   endif %}
+          {%   if "mode" not in newitem %}
+          {%     set _ = newitem.update({"mode": (user == "root") | ternary("0644", "0600")}) %}
+          {%   endif %}
+          {%   if "dir_mode" not in newitem %}
+          {%     set _ = newitem.update({"dir_mode": (user == "root") | ternary("0755", "0700")}) %}
+          {%   endif %}
+          {%   set _ = rv.append(newitem) %}
+          {% endfor %}
+          {{ rv }}
+
+    - name: Enable linger if needed
+      command: loginctl enable-linger {{ item | quote }}
+      loop: "{{ __systemd_user_list | reject('match', '^root$') | list }}"
+      args:
+        creates: /var/lib/systemd/linger/{{ item }}

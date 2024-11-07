@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_linger_user_data
+---
+- name: Get unit files for user
+  find:
+    path: "{{ __systemd_linger_data['units_dir'] }}"
+  register: __systemd_find
+
+- name: Cancel linger if no files
+  command: loginctl disable-linger {{ __systemd_linger_user | quote }}
+  changed_when: true
+  register: __systemd_cancel_linger
+  when: __systemd_find.matched == 0
+  args:
+    removes: /var/lib/systemd/linger/{{ __systemd_linger_user }}
+
+- name: Wait for user session to exit closing state  # noqa no-handler
+  command: loginctl show-user --value -p State {{ __systemd_linger_user | quote }}
+  register: __systemd_user_state
+  changed_when: false
+  until: __systemd_user_state.stdout != "closing"
+  when: __systemd_cancel_linger is changed
+  ignore_errors: true
+
+# see https://github.com/systemd/systemd/issues/26744#issuecomment-2261509208
+- name: Handle user stuck in closing state
+  vars:
+    __pat: "Failed to get user: User ID .* is not logged in or lingering"
+  when:
+    - __systemd_cancel_linger is changed
+    - __systemd_user_state is failed
+    - not __systemd_user_state.stderr is match(__pat)
+  block:
+    - name: Stop logind
+      service:
+        name: systemd-logind
+        state: stopped
+
+    - name: Wait for user session to exit closing state
+      command: loginctl show-user --value -p State {{ __systemd_linger_user | quote }}
+      changed_when: false
+      register: __systemd_user_state
+      until: __systemd_user_state.stderr is match(__pat) or
+        __systemd_user_state.stdout != "closing"
+      failed_when:
+        - not __systemd_user_state.stderr is match(__pat)
+        - __systemd_user_state.stdout == "closing"
+
+    - name: Restart logind
+      service:
+        name: systemd-logind
+        state: started
