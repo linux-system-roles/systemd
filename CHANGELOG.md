@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.3.1] - 2024-12-09
+--------------------
+
+### Bug Fixes
+
+- fix: Always become user we are managing (#73)
+
+### Other Changes
+
+- ci: Bump codecov/codecov-action from 4 to 5 (#69)
+- ci: Use Fedora 41, drop Fedora 39 (#70)
+- ci: Use Fedora 41, drop Fedora 39 - part two (#71)
+
 [1.3.0] - 2024-11-12
 --------------------
 
