@@ -33,7 +33,7 @@
         masked: "{{ __systemd_masked | bool if __systemd_masked | length > 0 else omit }}"
         scope: "{{ 'system' if item.user == 'root' else 'user' }}"
       loop: "{{ __systemd_dict_list }}"
-      become: "{{ item.user != 'root' }}"
-      become_user: "{{ item.user if item.user != 'root' else omit }}"
+      become: true
+      become_user: "{{ item.user }}"
       environment:
         XDG_RUNTIME_DIR: "{{ item.xdg_dir }}"

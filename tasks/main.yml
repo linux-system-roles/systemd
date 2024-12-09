@@ -114,8 +114,8 @@
     daemon_reload: true
     scope: "{{ 'system' if item == 'root' else 'user' }}"
   loop: "{{ __users_with_changes }}"
-  become: "{{ item != 'root' }}"
-  become_user: "{{ item if item != 'root' else omit }}"
+  become: true
+  become_user: "{{ item }}"
   environment:
     XDG_RUNTIME_DIR: "{{ __systemd_user_info[item]['xdg_dir'] }}"
   vars:
