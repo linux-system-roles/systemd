@@ -136,22 +136,22 @@
   loop_control:
     loop_var: managed_units
   loop:
+    - name: systemd_unmasked_units
+      masked: "false"
+    - name: systemd_enabled_units
+      enabled: "true"
     - name: systemd_started_units
       state: started
-    - name: systemd_stopped_units
-      state: stopped
     - name: systemd_restarted_units
       state: restarted
     - name: systemd_reloaded_units
       state: reloaded
-    - name: systemd_enabled_units
-      enabled: "true"
-    - name: systemd_disabled_units
-      enabled: "false"
+    - name: systemd_stopped_units
+      state: stopped
     - name: systemd_masked_units
       masked: "true"
-    - name: systemd_unmasked_units
-      masked: "false"
+    - name: systemd_disabled_units
+      enabled: "false"
 
 - name: DebugBefore
   debug:

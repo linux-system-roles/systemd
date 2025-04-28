@@ -210,3 +210,104 @@
     - name: Foo.service shouldn't be in systemd_units
       fail:
       when: ansible_facts['systemd_units']['foo.service'] is defined
+
+- name: Test unmask and start
+  hosts: all
+  gather_facts: false
+  vars:
+    # we need a
+    # * system service provided in /usr/lib/systemd/system
+    # * service exists on all platforms
+    # * service can be masked/stopped without breaking the test
+    # e.g. sshd is used by the test - stopping will break test
+    # look for these units in order
+    test_units:
+      - crond.service
+      - systemd-hostnamed.service
+      - systemd-journald.service
+    test_unit: crond.service
+  tasks:
+    - name: Get list of services that exist
+      shell:
+        executable: /bin/bash
+        cmd: |
+          set -euo pipefail
+          for unit in {{ test_units | join(" ") }}; do
+            if systemctl list-unit-files "$unit" > /dev/null 2>&1; then
+              echo "$unit"
+              exit 0
+            fi
+          done
+          exit 1
+      changed_when: false
+      register: __find_test_unit
+
+    - name: Set test unit
+      set_fact:
+        test_unit: "{{ __find_test_unit.stdout | trim }}"
+
+    - name: Ensure test unit is running and unmasked
+      include_role:
+        name: linux-system-roles.systemd
+      vars:
+        systemd_started_units:
+          - "{{ test_unit }}"
+        systemd_unmasked_units:
+          - "{{ test_unit }}"
+
+    - name: Get test unit state
+      # noqa command-instead-of-module
+      command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
+      register: test_unit_state
+      changed_when: false
+
+    - name: Ensure test unit running and unmasked
+      assert:
+        that:
+          - test_unit_state.stdout is search("UnitFileState=enabled") or
+            test_unit_state.stdout is search("UnitFileState=static")
+          - test_unit_state.stdout is search("SubState=running")
+
+    - name: Stop and mask test unit
+      include_role:
+        name: linux-system-roles.systemd
+      vars:
+        systemd_stopped_units:
+          - "{{ test_unit }}"
+        systemd_masked_units:
+          - "{{ test_unit }}"
+
+    - name: Get test unit state
+      # noqa command-instead-of-module
+      command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
+      register: test_unit_state
+      changed_when: false
+
+    - name: Ensure test unit stopped and masked
+      assert:
+        that:
+          - test_unit_state.stdout is search("UnitFileState=masked") or
+            test_unit_state.stdout is search("UnitFileState=bad")
+          - test_unit_state.stdout is search("SubState=dead")
+
+    - name: Ensure test unit is running and unmasked
+      include_role:
+        name: linux-system-roles.systemd
+      vars:
+        systemd_started_units:
+          - "{{ test_unit }}"
+        systemd_unmasked_units:
+          - "{{ test_unit }}"
+
+    - name: Get test unit state
+      # noqa command-instead-of-module
+      command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
+      register: test_unit_state
+      changed_when: false
+
+    - name: Ensure test unit running and unmasked
+      assert:
+        that:
+          - test_unit_state.stdout is search("UnitFileState=enabled") or
+            test_unit_state.stdout is search("UnitFileState=static")
+          - test_unit_state.stdout is search("SubState=running")
