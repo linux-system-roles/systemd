@@ -5,7 +5,7 @@
   gather_facts: false
   vars:
     systemd_unit_file_templates:
-      - foo.service.j2
+      - nested/dir/templates/foo.service.j2
   roles:
     - linux-system-roles.systemd
   tasks:
@@ -18,7 +18,7 @@
   gather_facts: false
   vars:
     systemd_dropins:
-      - foo.service.conf.j2
+      - nested/dir/templates/foo.service.conf.j2
   roles:
     - linux-system-roles.systemd
   tasks:

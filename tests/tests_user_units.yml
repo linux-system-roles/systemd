@@ -5,6 +5,11 @@
   gather_facts: false
   vars:
     systemd_fail_if_too_old: false  # allow test to pass on el7
+    __bar_service_name: bar.service
+    __bar_file_src: nested/dir/files/{{ __bar_service_name }}
+    __service_name: foo.service
+    __template_src: nested/dir/templates/{{ __service_name }}.j2
+    __template_conf_src: nested/dir/templates/{{ __service_name }}.conf.j2
     __users:
       - name: systemd_user1
         uid: 5411
@@ -12,38 +17,38 @@
         uid: 5412
     __all_units:
       - user: "{{ __users[0].name }}"
-        item: bar.service
+        item: "{{ __bar_service_name }}"
       - user: root
-        item: bar.service
+        item: "{{ __bar_service_name }}"
       - user: "{{ __users[1].name }}"
-        item: bar.service
+        item: "{{ __bar_service_name }}"
       - user: "{{ __users[0].name }}"
-        item: foo.service
+        item: "{{ __service_name }}"
       - user: root
-        item: foo.service
+        item: "{{ __service_name }}"
       - user: "{{ __users[1].name }}"
-        item: foo.service
+        item: "{{ __service_name }}"
     __systemd_unit_files:
       - user: "{{ __users[0].name }}"
-        item: bar.service
+        item: "{{ __bar_file_src }}"
       - user: root
-        item: bar.service
+        item: "{{ __bar_file_src }}"
       - user: "{{ __users[1].name }}"
-        item: bar.service
+        item: "{{ __bar_file_src }}"
     __systemd_unit_file_templates:
       - user: "{{ __users[0].name }}"
-        item: foo.service.j2
+        item: "{{ __template_src }}"
       - user: root
-        item: foo.service.j2
+        item: "{{ __template_src }}"
       - user: "{{ __users[1].name }}"
-        item: foo.service.j2
+        item: "{{ __template_src }}"
     __systemd_dropins:
       - user: "{{ __users[0].name }}"
-        item: foo.service.conf.j2
+        item: "{{ __template_conf_src }}"
       - user: root
-        item: foo.service.conf.j2
+        item: "{{ __template_conf_src }}"
       - user: "{{ __users[1].name }}"
-        item: foo.service.conf.j2
+        item: "{{ __template_conf_src }}"
     __systemd_started_units: "{{ __all_units }}"
     __systemd_stopped_units: "{{ __all_units }}"
     __systemd_restarted_units: "{{ __all_units }}"
@@ -86,7 +91,7 @@
 
         - name: Verify files are present
           stat:
-            path: "{{ __units_dir }}/{{ item.item }}"
+            path: "{{ __units_dir }}/{{ item.item | basename }}"
           register: __stat
           failed_when: not __stat.stat.exists
           loop: "{{ __systemd_unit_files }}"
@@ -101,7 +106,7 @@
           loop: "{{ __systemd_unit_file_templates }}"
           vars:
             __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
-            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __dest: "{{ item.item | basename | regex_replace('[.]j2$', '') }}"
 
         - name: Verify dropin files are present
           stat:
@@ -111,7 +116,7 @@
           loop: "{{ __systemd_dropins }}"
           vars:
             __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
-            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __dest: "{{ item.item | basename | regex_replace('[.]j2$', '') }}"
             __path: "{{ __units_dir }}/\
               {{ '.'.join(__dest.split('.')[:-1]) }}.d/\
               99-override.conf"
