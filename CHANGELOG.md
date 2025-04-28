@@ -1,6 +1,25 @@
 Changelog
 =========
 
+[1.3.2] - 2025-04-28
+--------------------
+
+### Bug Fixes
+
+- fix: unmask should run at the begin to allow the role to manage the units (#87)
+
+### Other Changes
+
+- ci: ansible-plugin-scan is disabled for now (#75)
+- ci: bump ansible-lint to v25; provide collection requirements for ansible-lint (#78)
+- ci: Check spelling with codespell (#79)
+- ci: Add test plan that runs CI tests and customize it for each role (#80)
+- ci: In test plans, prefix all relate variables with SR_ (#81)
+- ci: Fix bug with ARTIFACTS_URL after prefixing with SR_ (#82)
+- ci: several changes related to new qemu test, ansible-lint, python versions, ubuntu versions (#83)
+- ci: use tox-lsr 3.6.0; improve qemu test logging (#85)
+- ci: skip storage scsi, nvme tests in github qemu ci (#86)
+
 [1.3.1] - 2024-12-09
 --------------------
 
