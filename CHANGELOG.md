@@ -1,6 +1,13 @@
 Changelog
 =========
 
+[1.3.3] - 2025-04-29
+--------------------
+
+### Bug Fixes
+
+- fix: files and templates in nested directories are not placed correctly (#89)
+
 [1.3.2] - 2025-04-28
 --------------------
 
