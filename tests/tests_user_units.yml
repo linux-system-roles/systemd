@@ -161,7 +161,7 @@
           vars:
             systemd_disabled_units: "{{ __systemd_disabled_units }}"
 
-        - name: Get unit file state of units after
+        - name: Get unit file state of units after - 2
           # noqa command-instead-of-module
           command: systemctl {{ scope }} show -p UnitFileState {{ item.item }}
           changed_when: false
