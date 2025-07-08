@@ -137,7 +137,7 @@
   roles:
     - linux-system-roles.systemd
   tasks:
-    - name: Get UnitFileState=
+    - name: Get UnitFileState= - 2
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState foo.service
       register: unit_file_state_now
@@ -158,13 +158,13 @@
   roles:
     - linux-system-roles.systemd
   pre_tasks:
-    - name: Save UnitFileState before calling role
+    - name: Save UnitFileState before calling role - 2
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState sshd.service
       register: sshd_state_before
       changed_when: false
   tasks:
-    - name: Get UnitFileState=
+    - name: Get UnitFileState= - 3
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState sshd.service
       register: sshd_state_after
@@ -187,7 +187,7 @@
   roles:
     - linux-system-roles.systemd
   tasks:
-    - name: Get UnitFileState=
+    - name: Get UnitFileState= - 4
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState sshd.service
       register: sshd_state_now
@@ -277,7 +277,7 @@
         systemd_masked_units:
           - "{{ test_unit }}"
 
-    - name: Get test unit state
+    - name: Get test unit state - 2
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
       register: test_unit_state
@@ -290,7 +290,7 @@
             test_unit_state.stdout is search("UnitFileState=bad")
           - test_unit_state.stdout is search("SubState=dead")
 
-    - name: Ensure test unit is running and unmasked
+    - name: Ensure test unit is running and unmasked - 2
       include_role:
         name: linux-system-roles.systemd
       vars:
@@ -299,13 +299,13 @@
         systemd_unmasked_units:
           - "{{ test_unit }}"
 
-    - name: Get test unit state
+    - name: Get test unit state - 3
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
       register: test_unit_state
       changed_when: false
 
-    - name: Ensure test unit running and unmasked
+    - name: Ensure test unit running and unmasked - 2
       assert:
         that:
           - test_unit_state.stdout is search("UnitFileState=enabled") or

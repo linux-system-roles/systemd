@@ -32,43 +32,39 @@
       loop_control:
         loop_var: __systemd_user_name
 
+    - name: Reset __systemd_dict_list
+      set_fact:
+        __systemd_dict_list: []
+
     # convert to the output format
     - name: Convert to list of dict with user data
       set_fact:
-        __systemd_dict_list: |
-          {% set rv = [] %}
-          {% for item in __systemd_list %}
-          {%   set newitem = {} %}
-          {%   if item is mapping %}
-          {%     set _ = newitem.update(item) %}
-          {%   else %}
-          {%     set _ = newitem.update({"item": item}) %}
-          {%   endif %}
-          {%   if "state" not in newitem %}
-          {%     set _ = newitem.update({"state": "present"}) %}
-          {%   endif %}
-          {%   if "user" not in newitem %}
-          {%     set _ = newitem.update({"user": "root"}) %}
-          {%   endif %}
-          {%   set user = newitem["user"] %}
-          {%   if "group" not in newitem %}
-          {%     set _ = newitem.update({"group": __systemd_user_info[user]["group"]}) %}
-          {%   endif %}
-          {%   if "xdg_dir" not in newitem %}
-          {%     set _ = newitem.update({"xdg_dir": __systemd_user_info[user]["xdg_dir"]}) %}
-          {%   endif %}
-          {%   if "units_dir" not in newitem %}
-          {%     set _ = newitem.update({"units_dir": __systemd_user_info[user]["units_dir"]}) %}
-          {%   endif %}
-          {%   if "mode" not in newitem %}
-          {%     set _ = newitem.update({"mode": (user == "root") | ternary("0644", "0600")}) %}
-          {%   endif %}
-          {%   if "dir_mode" not in newitem %}
-          {%     set _ = newitem.update({"dir_mode": (user == "root") | ternary("0755", "0700")}) %}
-          {%   endif %}
-          {%   set _ = rv.append(newitem) %}
-          {% endfor %}
-          {{ rv }}
+        __systemd_dict_list: "{{ __systemd_dict_list +
+          [newitem | combine(newstate, newuser, newgroup, newxdg_dir, newunits_dir, newmode, newdir_mode)] }}"
+      loop: "{{ __systemd_list }}"
+      vars:
+        newitem: "{{ item if item is mapping else {'item': item} }}"
+        newstate:
+          state: "{{ item['state'] if item is mapping and 'state' in item
+            else 'present' }}"
+        newuser:
+          user: "{{ item['user'] if item is mapping and 'user' in item
+            else 'root' }}"
+        newgroup:
+          group: "{{ item['group'] if item is mapping and 'group' in item
+            else __systemd_user_info[newuser['user']]['group'] }}"
+        newxdg_dir:
+          xdg_dir: "{{ item['xdg_dir'] if item is mapping and 'xdg_dir' in item
+            else __systemd_user_info[newuser['user']]['xdg_dir'] }}"
+        newunits_dir:
+          units_dir: "{{ item['units_dir'] if item is mapping and 'units_dir' in item
+            else __systemd_user_info[newuser['user']]['units_dir'] }}"
+        newmode:
+          mode: "{{ item['mode'] if item is mapping and 'mode' in item
+            else (newuser['user'] == 'root') | ternary('0644', '0600') }}"
+        newdir_mode:
+          dir_mode: "{{ item['dir_mode'] if item is mapping and 'dir_mode' in item
+            else (newuser['user'] == 'root') | ternary('0755', '0700') }}"
 
     - name: Enable linger if needed
       command: loginctl enable-linger {{ item | quote }}
