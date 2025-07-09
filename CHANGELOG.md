@@ -1,6 +1,18 @@
 Changelog
 =========
 
+[1.3.4] - 2025-07-09
+--------------------
+
+### Other Changes
+
+- ci: Bump sclorg/testing-farm-as-github-action from 3 to 4 (#91)
+- ci: bump tox-lsr to 3.8.0; rename qemu/kvm tests (#92)
+- ci: Add Fedora 42; use tox-lsr 3.9.0; use lsr-report-errors for qemu tests (#93)
+- ci: Add support for bootc end-to-end validation tests (#94)
+- ci: Use ansible 2.19 for fedora 42 testing; support python 3.13 (#95)
+- refactor: support ansible 2.19, new ansible-lint (#96)
+
 [1.3.3] - 2025-04-29
 --------------------
 
