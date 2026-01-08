@@ -277,18 +277,19 @@
         systemd_masked_units:
           - "{{ test_unit }}"
 
-    - name: Get test unit state - 2
+    - name: Get test unit state and check status
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState -p SubState "{{ test_unit }}"
       register: test_unit_state
       changed_when: false
-
-    - name: Ensure test unit stopped and masked
-      assert:
-        that:
-          - test_unit_state.stdout is search("UnitFileState=masked") or
-            test_unit_state.stdout is search("UnitFileState=bad")
-          - test_unit_state.stdout is search("SubState=dead")
+      until: condition
+      retries: 6
+      delay: 10
+      failed_when: not condition
+      vars:
+        condition: "{{ (test_unit_state.stdout is search('UnitFileState=masked') or
+                        test_unit_state.stdout is search('UnitFileState=bad'))
+          and test_unit_state.stdout is search('SubState=dead') }}"
 
     - name: Ensure test unit is running and unmasked - 2
       include_role:
