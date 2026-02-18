@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.3.7] - 2026-02-18
+--------------------
+
+### Other Changes
+
+- ci: Bump ansible/ansible-lint from 25 to 26 (#123)
+- ci: skip most CI checks if title contains citest skip [citest_skip] (#124)
+- ci: ansible-lint - remove .collection directory from converted collection [citest_skip] (#125)
+- ci: tox-lsr version 3.15.0 [citest_skip] (#126)
+- ci: Add Fedora 43, remove Fedora 41 from Testing Farm CI (#127)
+- ci: Ansible version must be string, not float [citest_skip] (#128)
+- test: ostree requires cronie package for testing (#129)
+
 [1.3.6] - 2026-01-13
 --------------------
 
