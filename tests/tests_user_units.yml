@@ -2,7 +2,6 @@
 ---
 - name: Ensure that the role works with a mix of user and system units
   hosts: all
-  gather_facts: false
   vars:
     systemd_fail_if_too_old: false  # allow test to pass on el7
     __bar_service_name: bar.service
@@ -67,10 +66,9 @@
           loop: "{{ __users }}"
 
         - name: Run role to create and start units
-          include_role:
-            name: linux-system-roles.systemd
-            public: true
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
+            __sr_public: true
             systemd_unit_files: "{{ __systemd_unit_files }}"
             systemd_unit_file_templates: "{{ __systemd_unit_file_templates }}"
             systemd_dropins: "{{ __systemd_dropins }}"
@@ -136,8 +134,7 @@
             scope: "{{ '--system' if item.user == 'root' else '--user' }}"
 
         - name: Run role to enable units
-          include_role:
-            name: linux-system-roles.systemd
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             systemd_enabled_units: "{{ __systemd_enabled_units }}"
 
@@ -156,8 +153,7 @@
             scope: "{{ '--system' if item.user == 'root' else '--user' }}"
 
         - name: Run role to disable units
-          include_role:
-            name: linux-system-roles.systemd
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             systemd_disabled_units: "{{ __systemd_disabled_units }}"
 
@@ -176,8 +172,7 @@
             scope: "{{ '--system' if item.user == 'root' else '--user' }}"
 
         - name: Run role to stop units
-          include_role:
-            name: linux-system-roles.systemd
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
             systemd_stopped_units: "{{ __systemd_stopped_units }}"
 
@@ -187,10 +182,9 @@
           loop: "{{ __all_units }}"
 
         - name: Run role to remove unit files and dropins
-          include_role:
-            name: linux-system-roles.systemd
-            public: true
+          include_tasks: tasks/run_role_with_clear_facts.yml
           vars:
+            __sr_public: true
             systemd_unit_files: "{{ __systemd_unit_files |
               map('combine', __absent) | list }}"
             systemd_unit_file_templates: "{{ __systemd_unit_file_templates |

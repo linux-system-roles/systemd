@@ -2,9 +2,12 @@
 ---
 - name: Ensure that basic features of role work correctly
   hosts: all
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
+      vars:
+        __sr_public: true
+
     - name: Print units facts
       debug:
         msg: "{{ systemd_units }}"
