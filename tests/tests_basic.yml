@@ -2,26 +2,24 @@
 ---
 - name: Ensure that deploying unit files work correctly
   hosts: all
-  gather_facts: false
   vars:
     systemd_unit_file_templates:
       - nested/dir/templates/foo.service.j2
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Verify that unit file was deployed
       stat:
         path: /etc/systemd/system/foo.service
 
 - name: Ensure that deploying unit file dropins work correctly
   hosts: all
-  gather_facts: false
   vars:
     systemd_dropins:
       - nested/dir/templates/foo.service.conf.j2
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Stat the dropin directory path
       stat:
         path: /etc/systemd/system/foo.service.d
@@ -38,13 +36,12 @@
 
 - name: Ensure that we can start units using the role
   hosts: all
-  gather_facts: false
   vars:
     systemd_started_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Make sure that foo.service main state is active
       assert:
         that:
@@ -59,12 +56,9 @@
 
 - name: Ensure that we can restart units using the role
   hosts: all
-  gather_facts: false
   vars:
     systemd_restarted_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   pre_tasks:
     - name: Save MainPID of foo.service before restart
       # noqa command-instead-of-module
@@ -72,6 +66,8 @@
       register: pid_before_restart
       changed_when: false
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Get MainPID of foo.service
       # noqa command-instead-of-module
       command: systemctl show -p MainPID foo.service
@@ -85,30 +81,26 @@
 
 - name: Ensure that we can reload units
   hosts: all
-  gather_facts: false
   vars:
     systemd_reloaded_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   pre_tasks:
     - name: Delete reload flag file
       file:
         path: /tmp/foo-service-reloaded
         state: absent
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Reload operation should created flag file
       stat:
         path: /tmp/foo-service-reloaded
 
 - name: Ensure that we can enable unit files
   hosts: all
-  gather_facts: false
   vars:
     systemd_enabled_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   pre_tasks:
     - name: Save UnitFileState before calling role
       # noqa command-instead-of-module
@@ -116,6 +108,8 @@
       register: unit_file_state_before
       changed_when: false
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Get UnitFileState=
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState foo.service
@@ -130,13 +124,12 @@
 
 - name: Ensure that we can disable unit files
   hosts: all
-  gather_facts: false
   vars:
     systemd_disabled_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Get UnitFileState= - 2
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState foo.service
@@ -150,13 +143,10 @@
 
 - name: Ensure that we can mask unit files
   hosts: all
-  gather_facts: false
   vars:
     # It is not possible to mask admin units files in /etc/systemd/system.
     systemd_masked_units:
       - sshd.service
-  roles:
-    - linux-system-roles.systemd
   pre_tasks:
     - name: Save UnitFileState before calling role - 2
       # noqa command-instead-of-module
@@ -164,6 +154,8 @@
       register: sshd_state_before
       changed_when: false
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Get UnitFileState= - 3
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState sshd.service
@@ -180,13 +172,12 @@
 
 - name: Ensure that we can unmask unit files
   hosts: all
-  gather_facts: false
   vars:
     systemd_unmasked_units:
       - sshd.service
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Get UnitFileState= - 4
       # noqa command-instead-of-module
       command: systemctl show -p UnitFileState sshd.service
@@ -200,20 +191,18 @@
 
 - name: Ensure that we can stop units
   hosts: all
-  gather_facts: false
   vars:
     systemd_stopped_units:
       - foo.service
-  roles:
-    - linux-system-roles.systemd
   tasks:
+    - name: Run the role
+      include_tasks: tasks/run_role_with_clear_facts.yml
     - name: Foo.service shouldn't be in systemd_units
       fail:
       when: ansible_facts['systemd_units']['foo.service'] is defined
 
 - name: Test unmask and start
   hosts: all
-  gather_facts: false
   vars:
     # we need a
     # * system service provided in /usr/lib/systemd/system
@@ -247,8 +236,7 @@
         test_unit: "{{ __find_test_unit.stdout | trim }}"
 
     - name: Ensure test unit is running and unmasked
-      include_role:
-        name: linux-system-roles.systemd
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         systemd_started_units:
           - "{{ test_unit }}"
@@ -269,8 +257,7 @@
           - test_unit_state.stdout is search("SubState=running")
 
     - name: Stop and mask test unit
-      include_role:
-        name: linux-system-roles.systemd
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         systemd_stopped_units:
           - "{{ test_unit }}"
@@ -292,8 +279,7 @@
           and test_unit_state.stdout is search('SubState=dead') }}"
 
     - name: Ensure test unit is running and unmasked - 2
-      include_role:
-        name: linux-system-roles.systemd
+      include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         systemd_started_units:
           - "{{ test_unit }}"
