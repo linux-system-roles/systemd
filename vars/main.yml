@@ -13,6 +13,8 @@ __systemd_all_units: "{{ systemd_unit_files + systemd_unit_file_templates +
   systemd_restarted_units + systemd_reloaded_units + systemd_enabled_units +
   systemd_disabled_units + systemd_masked_units + systemd_unmasked_units }}"
 
+__systemd_write_log_file: false
+
 # BEGIN - DO NOT EDIT THIS BLOCK - rh distros variables
 # Ansible distribution identifiers that the role treats like RHEL
 __systemd_rh_distros:
