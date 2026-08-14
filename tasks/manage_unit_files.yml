@@ -76,7 +76,6 @@
           file:
             path: "{{ __path }}/{{ __file }}"
             state: absent
-            owner: "{{ item.user }}"  # only needed for daemon_reload which happens later
           loop: "{{ __systemd_absent }}"
           register: __systemd_unit_files_absent_result
 
@@ -89,9 +88,15 @@
 
         - name: Remove dropin directory if no more files
           file:
-            path: "{{ item['invocation']['module_args']['path'] }}"
+            path: "{{ __dropin_dir }}"
             state: absent
           loop: "{{ __systemd_find.results | d([]) }}"
+          vars:
+            __find_item: "{{ item.item }}"
+            __dropin_unit: "{{ __find_item.item | basename |
+              regex_replace('[.]j2$', '') }}"
+            __dropin_dir: "{{ __find_item.units_dir ~ '/' ~
+              '.'.join(__dropin_unit.split('.')[:-1]) ~ '.d' }}"
           when:
             - __systemd_list_name == "systemd_dropins"
             - item.matched == 0

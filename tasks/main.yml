@@ -133,8 +133,8 @@
       __systemd_unit_file_templates_result.get('results', []) +
       __systemd_unit_files_absent_result.get('results', []) }}"
     __users_with_changes: "{{ all_results | selectattr('changed', 'defined') |
-      selectattr('changed') | map(attribute='invocation') |
-      map(attribute='module_args') | map(attribute='owner') | unique | list }}"
+      selectattr('changed') | map(attribute='item') | map(attribute='user') |
+      unique | list }}"
 
 - name: Manage units
   include_tasks: manage_units.yml

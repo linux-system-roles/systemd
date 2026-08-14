@@ -298,3 +298,37 @@
           - test_unit_state.stdout is search("UnitFileState=enabled") or
             test_unit_state.stdout is search("UnitFileState=static")
           - test_unit_state.stdout is search("SubState=running")
+
+- name: Ensure that removing unit file dropins works correctly
+  hosts: all
+  vars:
+    systemd_dropins:
+      - item: nested/dir/templates/foo.service.conf.j2
+        state: absent
+  tasks:
+    - name: Test dropin removal
+      block:
+        - name: Run the role
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+        - name: Stat the dropin directory path after removal
+          stat:
+            path: /etc/systemd/system/foo.service.d
+          register: dropin_removed
+
+        - name: Check that dropin directory was removed
+          assert:
+            that:
+              - not dropin_removed.stat.exists
+      always:
+        - name: Clean up dropin directory
+          file:
+            path: /etc/systemd/system/foo.service.d
+            state: absent
+          register: __dropin_cleanup
+          tags: tests::cleanup
+
+        - name: Reload systemd if cleanup removed anything
+          systemd:
+            daemon_reload: true
+          when: __dropin_cleanup is changed
+          tags: tests::cleanup
