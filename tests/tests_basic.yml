@@ -330,5 +330,5 @@
         - name: Reload systemd if cleanup removed anything
           systemd:
             daemon_reload: true
-          when: __dropin_cleanup is changed
+          when: __dropin_cleanup is changed  # noqa no-handler
           tags: tests::cleanup
