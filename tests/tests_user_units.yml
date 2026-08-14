@@ -197,7 +197,7 @@
 
         - name: Verify files are absent
           stat:
-            path: "{{ __units_dir }}/{{ item.item }}"
+            path: "{{ __units_dir }}/{{ item.item | basename }}"
           register: __stat
           failed_when: __stat.stat.exists
           loop: "{{ __systemd_unit_files }}"
@@ -212,9 +212,9 @@
           loop: "{{ __systemd_unit_file_templates }}"
           vars:
             __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
-            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __dest: "{{ item.item | basename | regex_replace('[.]j2$', '') }}"
 
-        - name: Verify dropin files are absent
+        - name: Verify dropin directories are absent
           stat:
             path: "{{ __path }}"
           register: __stat
@@ -222,10 +222,9 @@
           loop: "{{ __systemd_dropins }}"
           vars:
             __units_dir: "{{ __systemd_user_info[item.user]['units_dir'] }}"
-            __dest: "{{ item.item | regex_replace('[.]j2$', '') }}"
+            __dest: "{{ item.item | basename | regex_replace('[.]j2$', '') }}"
             __path: "{{ __units_dir }}/\
-              {{ '.'.join(__dest.split('.')[:-1]) }}.d/\
-              99-override.conf"
+              {{ '.'.join(__dest.split('.')[:-1]) }}.d"
 
         - name: Verify no lingering
           stat:
