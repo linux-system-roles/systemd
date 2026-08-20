@@ -1,6 +1,19 @@
 Changelog
 =========
 
+[1.5.1] - 2026-08-20
+--------------------
+
+### Bug Fixes
+
+- fix: ansible 2.19+ removed invocation as part of the data rework. also fixed some tests (#163)
+
+### Other Changes
+
+- ci: use commit hash for github action, add persist-credentials false [citest_skip] (#160)
+- ci: refactor build_docs so that pandoc runs in isolated read-only job [citest_skip] (#161)
+- ci: use exact match for systemroller instead of contains [citest_skip] (#162)
+
 [1.5.0] - 2026-08-06
 --------------------
 
