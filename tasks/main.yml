@@ -163,10 +163,6 @@
     - name: systemd_disabled_units
       enabled: "false"
 
-- name: DebugBefore
-  debug:
-    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
-
 - name: Gather systemd units state for system and user units
   include_tasks: get_systemd_units_info.yml
   loop: "{{ __user_info | dict2items }}"
@@ -175,10 +171,6 @@
   vars:
     __user_info: "{{ __systemd_user_info if __systemd_user_info.keys() | length > 0
       else {'root': {'xdg_dir': '/run/user/0'}} }}"
-
-- name: DebugAfter
-  debug:
-    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
 
 - name: Set legacy systemd_units output variable
   set_fact:
