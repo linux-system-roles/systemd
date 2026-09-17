@@ -7,6 +7,7 @@
 # user: root for system units, or user for user units
 #       if no user is given, root is used
 # state: default is present - use absent to remove unit files
+# file_content: systemd_unit_files/systemd_dropins - file contents as string
 systemd_unit_files: []
 systemd_unit_file_templates: []
 systemd_dropins: []

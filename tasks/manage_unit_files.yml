@@ -13,6 +13,27 @@
       - systemd_unit_file_templates
       - systemd_dropins
   block:
+    - name: Fail if file_content is used with unit file templates
+      fail:
+        msg: >-
+          use systemd_unit_files instead - the content of file_content
+          is already processed as a Jinja template by Ansible
+      when:
+        - __systemd_list_name == "systemd_unit_file_templates"
+        - __systemd_list | select('mapping') |
+          selectattr('file_content', 'defined') | list | length > 0
+
+    - name: Fail if file_content is not a string
+      fail:
+        msg: >-
+          file_content must be a string - not a string for
+          {{ __non_string | map(attribute='item') | list }}
+      vars:
+        __non_string: "{{ __systemd_list | select('mapping') |
+          selectattr('file_content', 'defined') |
+          rejectattr('file_content', 'string') | list }}"
+      when: __non_string | length > 0
+
     # this uses __systemd_list set above
     - name: Manage user info
       include_tasks: manage_user_info.yml
@@ -30,6 +51,10 @@
           else item.units_dir }}"
         __systemd_present: "{{ __systemd_dict_list | selectattr('state', 'match', '^present$') |
           list }}"
+        __systemd_present_src: "{{ __systemd_present |
+          rejectattr('file_content', 'defined') | list }}"
+        __systemd_present_content: "{{ __systemd_present |
+          selectattr('file_content', 'defined') | list }}"
         __systemd_absent: "{{ __systemd_dict_list | selectattr('state', 'match', '^absent$') |
           list }}"
       block:
@@ -58,7 +83,7 @@
             group: "{{ item.group }}"
             mode: "{{ item.mode }}"
           when: __systemd_list_name == "systemd_unit_files"
-          loop: "{{ __systemd_present }}"
+          loop: "{{ __systemd_present_src }}"
           register: __systemd_unit_files_result
 
         - name: Ensure unit file templates are present
@@ -69,8 +94,18 @@
             group: "{{ item.group }}"
             mode: "{{ item.mode }}"
           when: __systemd_list_name != "systemd_unit_files"
-          loop: "{{ __systemd_present }}"
+          loop: "{{ __systemd_present_src }}"
           register: __systemd_unit_file_templates_result
+
+        - name: Ensure unit files from file_content are present
+          copy:
+            content: "{{ item.file_content }}"
+            dest: "{{ __path }}/{{ __file }}"
+            owner: "{{ item.user }}"
+            group: "{{ item.group }}"
+            mode: "{{ item.mode }}"
+          loop: "{{ __systemd_present_content }}"
+          register: __systemd_unit_file_content_result
 
         - name: Ensure unit files are absent
           file:

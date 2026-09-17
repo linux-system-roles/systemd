@@ -1,0 +1,225 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Ensure that deploying unit files and dropins from file_content works
+  hosts: all
+  vars:
+    systemd_fail_if_too_old: false  # allow test to pass on el7
+    __service_name: content.service
+    __dropin_name: content.service.conf
+    __dropin_file: content.service.d/99-override.conf
+    __user:
+      name: systemd_content_user
+      uid: 5413
+    __users:
+      - root
+      - "{{ __user.name }}"
+    __unit_content_v1: |
+      [Service]
+      ExecStart=/bin/sleep 3600
+
+      [Install]
+      WantedBy=default.target
+    __unit_content_v2: |
+      [Service]
+      ExecStart=/bin/sleep 7200
+
+      [Install]
+      WantedBy=default.target
+    __dropin_content: |
+      [Service]
+      PrivateTmp=yes
+    __systemd_unit_files_v1:
+      - item: "{{ __service_name }}"
+        user: root
+        file_content: "{{ __unit_content_v1 }}"
+      - item: "{{ __service_name }}"
+        user: "{{ __user.name }}"
+        file_content: "{{ __unit_content_v1 }}"
+    __systemd_unit_files_v2:
+      - item: "{{ __service_name }}"
+        user: root
+        file_content: "{{ __unit_content_v2 }}"
+      - item: "{{ __service_name }}"
+        user: "{{ __user.name }}"
+        file_content: "{{ __unit_content_v2 }}"
+    __systemd_dropins:
+      - item: "{{ __dropin_name }}"
+        user: root
+        file_content: "{{ __dropin_content }}"
+      - item: "{{ __dropin_name }}"
+        user: "{{ __user.name }}"
+        file_content: "{{ __dropin_content }}"
+    __systemd_started_units:
+      - item: "{{ __service_name }}"
+        user: root
+      - item: "{{ __service_name }}"
+        user: "{{ __user.name }}"
+    __absent:
+      state: absent
+  tasks:
+    - name: Run tests
+      block:
+        - name: Create user
+          user:
+            name: "{{ __user.name }}"
+            uid: "{{ __user.uid }}"
+
+        - name: Run role to create and start units from file_content
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            __sr_public: true
+            systemd_unit_files: "{{ __systemd_unit_files_v1 }}"
+            systemd_dropins: "{{ __systemd_dropins }}"
+            systemd_started_units: "{{ __systemd_started_units }}"
+
+        - name: Verify unit files have the expected content
+          slurp:
+            path: "{{ __systemd_user_info[item]['units_dir'] }}/{{ __service_name }}"
+          register: __slurp
+          failed_when: __slurp.content | b64decode != __unit_content_v1
+          loop: "{{ __users }}"
+
+        - name: Verify dropin files have the expected content
+          slurp:
+            path: "{{ __systemd_user_info[item]['units_dir'] }}/{{ __dropin_file }}"
+          register: __slurp
+          failed_when: __slurp.content | b64decode != __dropin_content
+          loop: "{{ __users }}"
+
+        - name: Verify units are started
+          assert:
+            that:
+              - >-
+                ansible_facts["systemd_units_user"][item.user]
+                [item.item]
+                ["active_state"] == "active"
+              - >-
+                ansible_facts["systemd_units_user"][item.user]
+                [item.item]
+                ["sub_state"] == "running"
+          loop: "{{ __systemd_started_units }}"
+
+        - name: Run role again with the same file_content
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            __sr_public: true
+            systemd_unit_files: "{{ __systemd_unit_files_v1 }}"
+            systemd_dropins: "{{ __systemd_dropins }}"
+
+        - name: Verify the role is idempotent
+          assert:
+            that:
+              - __systemd_unit_file_content_result is not changed
+
+        - name: Run role with changed file_content
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            __sr_public: true
+            systemd_unit_files: "{{ __systemd_unit_files_v2 }}"
+
+        - name: Verify changed file_content is reported as changed
+          assert:
+            that:
+              - __systemd_unit_file_content_result is changed
+
+        - name: Verify unit files have the changed content
+          slurp:
+            path: "{{ __systemd_user_info[item]['units_dir'] }}/{{ __service_name }}"
+          register: __slurp
+          failed_when: __slurp.content | b64decode != __unit_content_v2
+          loop: "{{ __users }}"
+
+        - name: Run role to stop units
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            systemd_stopped_units: "{{ __systemd_started_units }}"
+
+        - name: Run role to remove unit files and dropins
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            __sr_public: true
+            systemd_unit_files: "{{ __systemd_unit_files_v2 |
+              map('combine', __absent) | list }}"
+            systemd_dropins: "{{ __systemd_dropins |
+              map('combine', __absent) | list }}"
+
+        - name: Verify unit files are absent
+          stat:
+            path: "{{ __systemd_user_info[item]['units_dir'] }}/{{ __service_name }}"
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __users }}"
+
+        - name: Verify dropin directories are absent
+          stat:
+            path: "{{ __systemd_user_info[item]['units_dir'] }}/{{ __dropin_file | dirname }}"
+          register: __stat
+          failed_when: __stat.stat.exists
+          loop: "{{ __users }}"
+
+        - name: Ensure file_content is rejected for unit file templates
+          block:
+            - name: Run role with file_content in systemd_unit_file_templates
+              include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_file_templates:
+                  - item: "{{ __service_name }}"
+                    file_content: "{{ __unit_content_v1 }}"
+
+            - name: Unreachable task
+              fail:
+                msg: UNREACH
+          rescue:
+            - name: Check error
+              fail:
+                msg: >-
+                  Role did not fail with the expected message {{ expected_msg }} but
+                  instead failed with {{ ansible_failed_result | to_nice_json }}
+              when: not expected_msg in ansible_failed_result.msg | d("")
+              vars:
+                expected_msg: file_content is not supported
+
+        - name: Ensure non-string file_content is rejected
+          block:
+            - name: Run role with non-string file_content
+              include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_files:
+                  - item: "{{ __service_name }}"
+                    file_content:
+                      Service:
+                        ExecStart: /bin/sleep 3600
+
+            - name: Unreachable task
+              fail:
+                msg: UNREACH
+          rescue:
+            - name: Check error
+              fail:
+                msg: >-
+                  Role did not fail with the expected message {{ expected_msg }} but
+                  instead failed with {{ ansible_failed_result | to_nice_json }}
+              when: not expected_msg in ansible_failed_result.msg | d("")
+              vars:
+                expected_msg: file_content must be a string
+
+      rescue:
+        - name: Get journald information
+          command: journalctl -ex
+          failed_when: true
+          changed_when: false
+
+      always:
+        - name: Remove unit files and dropins
+          include_tasks: tasks/run_role_with_clear_facts.yml
+          vars:
+            systemd_unit_files: "{{ __systemd_unit_files_v2 |
+              map('combine', __absent) | list }}"
+            systemd_dropins: "{{ __systemd_dropins |
+              map('combine', __absent) | list }}"
+
+        - name: Remove user
+          user:
+            name: "{{ __user.name }}"
+            uid: "{{ __user.uid }}"
+            state: absent
