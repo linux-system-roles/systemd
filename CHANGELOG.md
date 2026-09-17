@@ -1,6 +1,21 @@
 Changelog
 =========
 
+[1.5.2] - 2026-09-17
+--------------------
+
+### Bug Fixes
+
+- fix: remove debug tasts (#176)
+
+### Other Changes
+
+- ci(build_docs): fix pandoc container syntax [citest_skip] (#166)
+- refactor: Relax collection constraints, gate vendored modules by python version, update ci versions [citest_skip] (#172)
+- ci: do not run ci tests by default, require citest comment or label [citest_skip] (#173)
+- ci: replace weekly_ci with periodic_ci, stagger schedules [citest_skip] (#174)
+- ci: update status when action triggered by issue comment (#175)
+
 [1.5.1] - 2026-08-20
 --------------------
 
