@@ -36,11 +36,20 @@ The list of `dict` form looks like this:
 systemd_unit_files:
   - item: some.service
     user: my_user
+    file_content: |
+      [Service]
+      ExecStart=/bin/sleep 3600
+
+      [Install]
+      WantedBy=multi-user.target
     state: [present|absent]
 ```
 
 Use the `dict` form to manage user units, and to remove unit files.  If using
 user units, the role will manage lingering for those users.
+
+`file_content` is only available for `systemd_unit_files` and `systemd_dropins`,
+and will process any jinja inside the contents.
 
 *NOTE:* Support for user units is not available in EL7 or earlier.  This feature
 is only available in EL8 and later.
@@ -127,6 +136,14 @@ systemd_unit_files:
   - item: bar.service
     user: my_user
     state: absent
+  - item: baz.service
+    user: my_user
+    file_content: |
+      [Service]
+      ExecStart=/bin/sleep 3600
+
+      [Install]
+      WantedBy=default.target
 systemd_dropins:
   - item: cups.service.conf.j2
     user: root
@@ -134,6 +151,11 @@ systemd_dropins:
   - item: avahi-daemon.service.conf.j2
     user: my_user
     state: absent
+  - item: baz.service.conf
+    user: my_user
+    file_content: |
+      [Service]
+      PrivateTmp=yes
 systemd_started_units:
   - item: foo.service
     user: root
