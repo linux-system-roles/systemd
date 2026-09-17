@@ -165,7 +165,8 @@
 
 - name: DebugBefore
   debug:
-    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
+    var: ansible_facts.systemd_units_user
+    verbosity: 2
 
 - name: Gather systemd units state for system and user units
   include_tasks: get_systemd_units_info.yml
@@ -178,7 +179,8 @@
 
 - name: DebugAfter
   debug:
-    msg: facts {{ ansible_facts.systemd_units_user | d({}) | to_nice_json }}
+    var: ansible_facts.systemd_units_user
+    verbosity: 2
 
 - name: Set legacy systemd_units output variable
   set_fact:
