@@ -109,7 +109,7 @@
         - name: Verify the role is idempotent
           assert:
             that:
-              - __systemd_unit_file_content_result is not changed
+              - __systemd_users_with_changes | length == 0
 
         - name: Run role with changed file_content
           include_tasks: tasks/run_role_with_clear_facts.yml
@@ -117,10 +117,10 @@
             __sr_public: true
             systemd_unit_files: "{{ __systemd_unit_files_v2 }}"
 
-        - name: Verify changed file_content is reported as changed
+        - name: Verify changed file_content triggers a reload for both users
           assert:
             that:
-              - __systemd_unit_file_content_result is changed
+              - __systemd_users_with_changes | sort == __users | sort
 
         - name: Verify unit files have the changed content
           slurp:

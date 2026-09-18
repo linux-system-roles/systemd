@@ -103,9 +103,10 @@
       when:
         - systemd_transactional_update_reboot_ok is none
 
-- name: Reset __systemd_user_info
+- name: Reset __systemd_user_info and __systemd_users_with_changes
   set_fact:
     __systemd_user_info: {}
+    __systemd_users_with_changes: []
 
 - name: Manage files and templates and their directories
   include_tasks: manage_unit_files.yml
@@ -123,19 +124,11 @@
   systemd:
     daemon_reload: true
     scope: "{{ 'system' if item == 'root' else 'user' }}"
-  loop: "{{ __users_with_changes }}"
+  loop: "{{ __systemd_users_with_changes }}"
   become: true
   become_user: "{{ item }}"
   environment:
     XDG_RUNTIME_DIR: "{{ __systemd_user_info[item]['xdg_dir'] }}"
-  vars:
-    all_results: "{{ __systemd_unit_files_result.get('results', []) +
-      __systemd_unit_file_templates_result.get('results', []) +
-      __systemd_unit_file_content_result.get('results', []) +
-      __systemd_unit_files_absent_result.get('results', []) }}"
-    __users_with_changes: "{{ all_results | selectattr('changed', 'defined') |
-      selectattr('changed') | map(attribute='item') | map(attribute='user') |
-      unique | list }}"
 
 - name: Manage units
   include_tasks: manage_units.yml
