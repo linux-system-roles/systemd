@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Validate unit list variables
+  ansible.builtin.include_tasks: assert_unit_list.yml
+  vars:
+    __systemd_assert_list_name: "{{ __systemd_assert_list.name }}"
+    __systemd_assert_valid_keys: "{{ __systemd_assert_list.valid_keys }}"
+  loop_control:
+    loop_var: __systemd_assert_list
+    label: "{{ __systemd_assert_list.name }}"
+  loop:
+    - name: systemd_unit_files
+      valid_keys:
+        - item
+        - user
+        - state
+        - group
+        - mode
+        - dir_mode
+    - name: systemd_unit_file_templates
+      valid_keys:
+        - item
+        - user
+        - state
+        - group
+        - mode
+        - dir_mode
+    - name: systemd_dropins
+      valid_keys:
+        - item
+        - user
+        - state
+        - group
+        - mode
+        - dir_mode
+    - name: systemd_started_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_stopped_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_restarted_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_reloaded_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_enabled_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_disabled_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_masked_units
+      valid_keys:
+        - item
+        - user
+    - name: systemd_unmasked_units
+      valid_keys:
+        - item
+        - user
+  when: lookup('vars', __systemd_assert_list.name) | length > 0
+
+- name: Assert systemd_transactional_update_reboot_ok is null or a boolean
+  ansible.builtin.assert:
+    that:
+      - >-
+        (systemd_transactional_update_reboot_ok is none)
+        or (systemd_transactional_update_reboot_ok is sameas true)
+        or (systemd_transactional_update_reboot_ok is sameas false)
+    fail_msg: >-
+      systemd_transactional_update_reboot_ok must be null or a boolean,
+      got {{ systemd_transactional_update_reboot_ok | type_debug }}

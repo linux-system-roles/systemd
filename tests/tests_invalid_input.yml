@@ -1,0 +1,317 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Verify invalid parameters are rejected
+  hosts: all
+  tasks:
+    - name: Run invalid input tests
+      block:
+        # ====================================================
+        # Section 1: Verify role works with valid defaults
+        # ====================================================
+        - name: Run role with valid defaults
+          ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+
+        # ====================================================
+        # Section 2: argument_specs validation (Ansible 2.11+)
+        # ====================================================
+        - name: Run argument specs validation tests
+          when: ansible_version.full is version("2.11", ">=")
+          block:
+            # --- Test: invalid type for systemd_fail_if_too_old ---
+            - name: Argument specs reject non-boolean systemd_fail_if_too_old
+              block:
+                - name: Run role with systemd_fail_if_too_old as a string
+                  ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+                  vars:
+                    systemd_fail_if_too_old: not_a_bool
+              rescue:
+                - name: Mark invalid systemd_fail_if_too_old type rejected
+                  ansible.builtin.set_fact:
+                    __invalid_input_fail_if_too_old_type_failed: true
+                  when: >-
+                    'unable to convert to bool' in
+                    (ansible_failed_result | default({}) | to_json)
+
+            - name: Assert invalid systemd_fail_if_too_old type was rejected
+              ansible.builtin.assert:
+                that:
+                  - __invalid_input_fail_if_too_old_type_failed | default(false)
+                fail_msg: >-
+                  argument_specs should reject systemd_fail_if_too_old
+                  values that are not booleans
+
+        # ====================================================
+        # Section 3: assert_role_vars validation (all versions)
+        # ====================================================
+
+        # --- Test: unit list variable is not a list at all ---
+        # Note: this is NOT caught by meta/argument_specs. Ansible's
+        # type: list validator silently accepts a plain string (and
+        # does not rewrite the play variable in any case), so the
+        # rejection below comes entirely from assert_unit_list.yml's
+        # unconditional "Assert variable is a list" task, which is why
+        # this test lives in Section 3 rather than Section 2.
+        - name: Assert rejects systemd_started_units as a non-list string
+          block:
+            - name: Run role with systemd_started_units as a string
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_started_units: not_a_list
+          rescue:
+            - name: Mark invalid systemd_started_units type rejected
+              ansible.builtin.set_fact:
+                __invalid_input_started_units_type_failed: true
+              when: >-
+                'must be a list' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_started_units as a string was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_started_units_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_started_units
+              values that are not lists
+
+        # --- Test: unit list item is neither a string nor a dict ---
+        - name: Assert rejects systemd_unit_files item as integer
+          block:
+            - name: Run role with systemd_unit_files item as integer
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_files:
+                  - 12345
+          rescue:
+            - name: Mark invalid systemd_unit_files item type rejected
+              ansible.builtin.set_fact:
+                __invalid_input_unit_files_item_type_failed: true
+              when: >-
+                'must be a string or a dictionary' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_unit_files item as integer was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_unit_files_item_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_unit_files items that
+              are neither a string nor a dictionary
+
+        # --- Test: dict item missing the required 'item' key ---
+        - name: Assert rejects systemd_unit_files dict missing item key
+          block:
+            - name: Run role with systemd_unit_files dict missing item
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_files:
+                  - user: root
+                    state: present
+          rescue:
+            - name: Mark missing item key rejected
+              ansible.builtin.set_fact:
+                __invalid_input_unit_files_missing_item_failed: true
+              when: >-
+                "missing the required 'item' key" in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_unit_files dict missing item key was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_unit_files_missing_item_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_unit_files dictionary
+              entries without the required 'item' key
+
+        # --- Test: dict item with an invalid/unknown key ---
+        - name: Assert rejects systemd_unit_files dict with invalid key
+          block:
+            - name: Run role with systemd_unit_files dict having a bad key
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_files:
+                  - item: foo.service
+                    not_a_valid_key: something
+          rescue:
+            - name: Mark invalid key rejected
+              ansible.builtin.set_fact:
+                __invalid_input_unit_files_bad_key_failed: true
+              when: >-
+                'contains invalid keys' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_unit_files dict with invalid key was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_unit_files_bad_key_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_unit_files
+              dictionaries containing keys not in the valid set
+
+        # --- Test: dict item using a key only valid for file-type lists ---
+        - name: Assert rejects systemd_started_units dict with state key
+          block:
+            - name: Run role with systemd_started_units dict having state
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_started_units:
+                  - item: foo.service
+                    state: present
+          rescue:
+            - name: Mark started_units state key rejected
+              ansible.builtin.set_fact:
+                __invalid_input_started_units_bad_key_failed: true
+              when: >-
+                'contains invalid keys' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_started_units dict with state key was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_started_units_bad_key_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_started_units
+              dictionaries containing the state key, which is only valid
+              for systemd_unit_files, systemd_unit_file_templates, and
+              systemd_dropins
+
+        # --- Test: invalid state value ---
+        - name: Assert rejects systemd_dropins invalid state value
+          block:
+            - name: Run role with systemd_dropins invalid state
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_dropins:
+                  - item: foo.service.conf.j2
+                    state: invalid_state
+          rescue:
+            - name: Mark invalid dropins state rejected
+              ansible.builtin.set_fact:
+                __invalid_input_dropins_state_failed: true
+              when: >-
+                "must be 'present' or 'absent'" in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_dropins invalid state value was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_dropins_state_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_dropins state
+              values outside the allowed set (present, absent)
+
+        # --- Test: invalid mode type ---
+        - name: Assert rejects systemd_unit_file_templates mode as boolean
+          block:
+            - name: Run role with systemd_unit_file_templates mode as boolean
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_file_templates:
+                  - item: foo.service.j2
+                    mode: true
+          rescue:
+            - name: Mark invalid mode type rejected
+              ansible.builtin.set_fact:
+                __invalid_input_mode_type_failed: true
+              when: >-
+                'mode must be a string or integer' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_unit_file_templates mode as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_mode_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject mode values that are not a
+              string or integer
+
+        # --- Test: invalid dir_mode type ---
+        - name: Assert rejects systemd_dropins dir_mode as boolean
+          block:
+            - name: Run role with systemd_dropins dir_mode as boolean
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_dropins:
+                  - item: foo.service.conf.j2
+                    dir_mode: true
+          rescue:
+            - name: Mark invalid dir_mode type rejected
+              ansible.builtin.set_fact:
+                __invalid_input_dir_mode_type_failed: true
+              when: >-
+                'dir_mode must be a string or integer' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_dropins dir_mode as boolean was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_dir_mode_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject dir_mode values that are not
+              a string or integer
+
+        # --- Test: invalid user/group type ---
+        - name: Assert rejects systemd_unit_files user as a list
+          block:
+            - name: Run role with systemd_unit_files user as a list
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_unit_files:
+                  - item: foo.service
+                    user:
+                      - not
+                      - a
+                      - string
+          rescue:
+            - name: Mark invalid user type rejected
+              ansible.builtin.set_fact:
+                __invalid_input_user_type_failed: true
+              when: >-
+                'user must be a string' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert systemd_unit_files user as a list was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_user_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject user values that are not a
+              string
+
+        # --- Test: raw type field with wrong type ---
+        - name: Assert rejects systemd_transactional_update_reboot_ok as string
+          block:
+            - name: Run role with transactional_update_reboot_ok as string
+              ansible.builtin.include_tasks: tasks/run_role_with_clear_facts.yml
+              vars:
+                systemd_transactional_update_reboot_ok: not_a_bool
+          rescue:
+            - name: Mark transactional_update_reboot_ok string rejected
+              ansible.builtin.set_fact:
+                __invalid_input_tu_reboot_ok_type_failed: true
+              when: >-
+                'must be null or a boolean' in
+                (ansible_failed_result | default({}) | to_json)
+
+        - name: Assert transactional_update_reboot_ok as string was rejected
+          ansible.builtin.assert:
+            that:
+              - __invalid_input_tu_reboot_ok_type_failed | default(false)
+            fail_msg: >-
+              assert_role_vars should reject systemd_transactional_update_reboot_ok
+              when given a string value
+
+      always:
+        - name: Clear test facts
+          ansible.builtin.set_fact:
+            __invalid_input_fail_if_too_old_type_failed:
+            __invalid_input_started_units_type_failed:
+            __invalid_input_unit_files_item_type_failed:
+            __invalid_input_unit_files_missing_item_failed:
+            __invalid_input_unit_files_bad_key_failed:
+            __invalid_input_started_units_bad_key_failed:
+            __invalid_input_dropins_state_failed:
+            __invalid_input_mode_type_failed:
+            __invalid_input_dir_mode_type_failed:
+            __invalid_input_user_type_failed:
+            __invalid_input_tu_reboot_ok_type_failed:
+          tags: tests::cleanup

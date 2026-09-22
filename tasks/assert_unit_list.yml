@@ -1,0 +1,150 @@
+# SPDX-License-Identifier: MIT
+# Inputs:
+#   __systemd_assert_list_name - name of the unit list variable to validate
+#   __systemd_assert_valid_keys - list of dict keys accepted by this variable
+---
+- name: Assert variable is a list
+  ansible.builtin.assert:
+    that:
+      - >-
+        __systemd_assert_list_value is sequence
+        and __systemd_assert_list_value is not string
+        and __systemd_assert_list_value is not mapping
+    fail_msg: >-
+      {{ __systemd_assert_list_name }} must be a list, got
+      {{ __systemd_assert_list_value | type_debug }}
+  vars:
+    __systemd_assert_list_value: "{{ lookup('vars', __systemd_assert_list_name) }}"
+
+- name: Assert list items are strings or dictionaries
+  ansible.builtin.assert:
+    that:
+      - >-
+        item is string
+        or item is mapping
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}] must be a string or a
+      dictionary, got {{ item | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+
+- name: Assert dictionary items have the required item key
+  ansible.builtin.assert:
+    that:
+      - "'item' in item"
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}] is missing the
+      required 'item' key
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when: item is mapping
+
+- name: Assert dictionary items contain only valid keys
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.keys() | list | difference(__systemd_assert_valid_keys)
+        | length == 0
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}] contains invalid keys:
+      {{ item.keys() | list | difference(__systemd_assert_valid_keys) |
+      join(', ') }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when: item is mapping
+
+- name: Assert item value is a string
+  ansible.builtin.assert:
+    that:
+      - item.item is string
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].item must be a string,
+      got {{ item.item | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.item is defined
+
+- name: Assert user value is a string
+  ansible.builtin.assert:
+    that:
+      - item.user is string
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].user must be a string,
+      got {{ item.user | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.user is defined
+
+- name: Assert group value is a string
+  ansible.builtin.assert:
+    that:
+      - item.group is string
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].group must be a
+      string, got {{ item.group | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.group is defined
+
+- name: Assert state value is present or absent
+  ansible.builtin.assert:
+    that:
+      - item.state in ['present', 'absent']
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].state must be
+      'present' or 'absent', got {{ item.state }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.state is defined
+
+- name: Assert mode value is a string or integer
+  ansible.builtin.assert:
+    that:
+      - (item.mode | type_debug) in ['str', 'int']
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].mode must be a string
+      or integer, got {{ item.mode | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.mode is defined
+
+- name: Assert dir_mode value is a string or integer
+  ansible.builtin.assert:
+    that:
+      - (item.dir_mode | type_debug) in ['str', 'int']
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].dir_mode must be a
+      string or integer, got {{ item.dir_mode | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.dir_mode is defined
