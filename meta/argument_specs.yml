@@ -1,0 +1,148 @@
+# SPDX-License-Identifier: MIT
+---
+argument_specs:
+  main:
+    short_description: The systemd role.
+    description: >
+      The systemd role allows you to deploy systemd unit files and unit
+      file templates, manage systemd drop-in files, and control the state
+      of systemd units (started, stopped, restarted, reloaded, enabled,
+      disabled, masked, or unmasked) on managed hosts.
+
+      Each list variable accepts either a plain string, which is treated
+      as a system unit owned by `root`, or a dictionary for more advanced
+      control such as managing user units or removing unit files. Using
+      user units requires managing linger for the affected users, which
+      this role handles automatically.
+    options:
+      systemd_unit_files:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of systemd unit files to deploy to managed nodes. Each
+          item is a string giving the path to a unit file on the
+          controller, or a dictionary with the keys `item` (the path to
+          the unit file, required), `user` (the user account that owns
+          the unit, defaults to `root`), `state` (`present` or `absent`,
+          defaults to `present`), `group` (defaults to the primary group
+          of `user`), `mode` (the file mode, defaults to `0644` for
+          `root` or `0600` for a non-root user), and `dir_mode` (the mode
+          of the directory that holds the unit file, defaults to `0755`
+          for `root` or `0700` for a non-root user).
+      systemd_unit_file_templates:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of systemd unit file templates to deploy to managed
+          nodes. Each item is a string giving the path to a Jinja2
+          template file on the controller, or a dictionary using the
+          same keys as `systemd_unit_files`. If the template file name
+          has a `.j2` suffix, it is stripped to form the unit name.
+      systemd_dropins:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of systemd drop-in file templates to deploy to managed
+          nodes, extending existing unit files. Each item is a string
+          giving the path to a Jinja2 template file on the controller,
+          or a dictionary using the same keys as `systemd_unit_files`.
+          The unit that a drop-in extends is derived from its file name;
+          for example, a template named `foo.service.conf` extends the
+          `foo.service` unit and is deployed as `99-override.conf` in
+          that unit's `.d` drop-in directory. If the template file name
+          has a `.j2` suffix, it is stripped before deriving the unit
+          name.
+      systemd_started_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of units to start. Each item is a string giving the
+          unit name, assumed to belong to `root`, or a dictionary with
+          the keys `item` (the unit name, required) and `user` (the user
+          the unit belongs to, defaults to `root`).
+      systemd_stopped_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of units to stop. Each item is a string giving the unit
+          name, assumed to belong to `root`, or a dictionary with the
+          keys `item` (the unit name, required) and `user` (the user the
+          unit belongs to, defaults to `root`).
+      systemd_restarted_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of units to restart. Each item is a string giving the
+          unit name, assumed to belong to `root`, or a dictionary with
+          the keys `item` (the unit name, required) and `user` (the user
+          the unit belongs to, defaults to `root`).
+      systemd_reloaded_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of units to reload. Each item is a string giving the
+          unit name, assumed to belong to `root`, or a dictionary with
+          the keys `item` (the unit name, required) and `user` (the user
+          the unit belongs to, defaults to `root`).
+      systemd_enabled_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of unit files to enable. Each item is a string giving
+          the unit name, assumed to belong to `root`, or a dictionary
+          with the keys `item` (the unit name, required) and `user` (the
+          user the unit belongs to, defaults to `root`).
+      systemd_disabled_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of unit files to disable. Each item is a string giving
+          the unit name, assumed to belong to `root`, or a dictionary
+          with the keys `item` (the unit name, required) and `user` (the
+          user the unit belongs to, defaults to `root`).
+      systemd_masked_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of unit files to mask. Each item is a string giving the
+          unit name, assumed to belong to `root`, or a dictionary with
+          the keys `item` (the unit name, required) and `user` (the user
+          the unit belongs to, defaults to `root`).
+      systemd_unmasked_units:
+        type: list
+        elements: raw
+        default: []
+        description: >
+          A list of unit files to unmask. Each item is a string giving
+          the unit name, assumed to belong to `root`, or a dictionary
+          with the keys `item` (the unit name, required) and `user` (the
+          user the unit belongs to, defaults to `root`).
+      systemd_transactional_update_reboot_ok:
+        type: raw
+        default: null
+        description: >
+          Whether to permit reboots required by transactional updates
+          when installing the packages needed by this role. Set to
+          `true` to allow the reboot, `false` to disallow the reboot and
+          rely on custom handling instead, or leave unset so the role
+          fails to ensure the reboot requirement is not overlooked.
+          Accepts a boolean value or `null`. Only applies to
+          transactional update systems.
+      systemd_fail_if_too_old:
+        type: bool
+        default: true
+        description: >
+          Whether the role should fail when user units are requested on
+          a platform that does not support them, such as RHEL/CentOS 7
+          and earlier. When set to `false`, the play ends for the
+          affected host instead of failing.
