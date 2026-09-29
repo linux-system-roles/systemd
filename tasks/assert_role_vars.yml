@@ -17,6 +17,7 @@
         - group
         - mode
         - dir_mode
+        - file_content
     - name: systemd_unit_file_templates
       valid_keys:
         - item
@@ -33,6 +34,7 @@
         - group
         - mode
         - dir_mode
+        - file_content
     - name: systemd_started_units
       valid_keys:
         - item

@@ -27,9 +27,12 @@ argument_specs:
           the unit, defaults to `root`), `state` (`present` or `absent`,
           defaults to `present`), `group` (defaults to the primary group
           of `user`), `mode` (the file mode, defaults to `0644` for
-          `root` or `0600` for a non-root user), and `dir_mode` (the mode
-          of the directory that holds the unit file, defaults to `0755`
-          for `root` or `0700` for a non-root user).
+          `root` or `0600` for a non-root user), `dir_mode` (the mode of
+          the directory that holds the unit file, defaults to `0755` for
+          `root` or `0700` for a non-root user), and `file_content` (the
+          unit file contents as a string; Jinja in the contents is
+          processed). When `file_content` is set, no source file is
+          copied from the controller.
       systemd_unit_file_templates:
         type: list
         elements: raw
@@ -38,8 +41,9 @@ argument_specs:
           A list of systemd unit file templates to deploy to managed
           nodes. Each item is a string giving the path to a Jinja2
           template file on the controller, or a dictionary using the
-          same keys as `systemd_unit_files`. If the template file name
-          has a `.j2` suffix, it is stripped to form the unit name.
+          same keys as `systemd_unit_files` except `file_content`, which
+          is not supported for templates. If the template file name has
+          a `.j2` suffix, it is stripped to form the unit name.
       systemd_dropins:
         type: list
         elements: raw

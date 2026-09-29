@@ -148,3 +148,18 @@
   when:
     - item is mapping
     - item.dir_mode is defined
+
+- name: Assert file_content value is a string
+  ansible.builtin.assert:
+    that:
+      - item.file_content is string
+    fail_msg: >-
+      {{ __systemd_assert_list_name }}[{{ idx }}].file_content must be a
+      string, got {{ item.file_content | type_debug }}
+  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
+  loop_control:
+    index_var: idx
+    label: "{{ idx }}"
+  when:
+    - item is mapping
+    - item.file_content is defined
