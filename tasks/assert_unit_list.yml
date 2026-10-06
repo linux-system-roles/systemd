@@ -43,6 +43,19 @@
     label: "{{ idx }}"
   when: item is mapping
 
+- name: Assert file_content is not used with unit file templates
+  ansible.builtin.assert:
+    that:
+      - __file_content_items | length == 0
+    fail_msg: >-
+      file_content is not supported for systemd_unit_file_templates -
+      use systemd_unit_files instead - the content of file_content
+      is already processed as a Jinja template by Ansible
+  vars:
+    __file_content_items: "{{ lookup('vars', __systemd_assert_list_name) |
+      select('mapping') | selectattr('file_content', 'defined') | list }}"
+  when: __systemd_assert_list_name == "systemd_unit_file_templates"
+
 - name: Assert dictionary items contain only valid keys
   ansible.builtin.assert:
     that:
@@ -149,17 +162,14 @@
     - item is mapping
     - item.dir_mode is defined
 
-- name: Assert file_content value is a string
+- name: Assert file_content values are strings
   ansible.builtin.assert:
     that:
-      - item.file_content is string
+      - __non_string_file_content | length == 0
     fail_msg: >-
-      {{ __systemd_assert_list_name }}[{{ idx }}].file_content must be a
-      string, got {{ item.file_content | type_debug }}
-  loop: "{{ lookup('vars', __systemd_assert_list_name) }}"
-  loop_control:
-    index_var: idx
-    label: "{{ idx }}"
-  when:
-    - item is mapping
-    - item.file_content is defined
+      file_content must be a string - not a string for
+      {{ __non_string_file_content | map(attribute='item') | list }}
+  vars:
+    __non_string_file_content: "{{ lookup('vars', __systemd_assert_list_name) |
+      select('mapping') | selectattr('file_content', 'defined') |
+      rejectattr('file_content', 'string') | list }}"
