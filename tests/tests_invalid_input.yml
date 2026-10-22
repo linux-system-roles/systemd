@@ -2,6 +2,13 @@
 ---
 - name: Verify invalid parameters are rejected
   hosts: all
+  vars:
+    __invalid_input_failure_messages: >-
+      {{ ([ansible_failed_result.msg | default('') | string,
+           ansible_failed_result.msg.msg | default('') | string]
+          + (ansible_failed_result.results | default([])
+             | map(attribute='msg') | map('default', '') | list))
+         | join(' ') }}
   tasks:
     - name: Run invalid input tests
       block:
@@ -29,8 +36,9 @@
                   ansible.builtin.set_fact:
                     __invalid_input_fail_if_too_old_type_failed: true
                   when: >-
-                    'unable to convert to bool' in
-                    (ansible_failed_result | default({}) | to_json)
+                    "argument 'systemd_fail_if_too_old'" in
+                    __invalid_input_failure_messages and
+                    'convert to bool' in __invalid_input_failure_messages
 
             - name: Assert invalid systemd_fail_if_too_old type was rejected
               ansible.builtin.assert:
@@ -62,8 +70,11 @@
               ansible.builtin.set_fact:
                 __invalid_input_started_units_type_failed: true
               when: >-
-                'must be a list' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_started_units must be a list, got' in
+                __invalid_input_failure_messages and
+                ('got str' in __invalid_input_failure_messages or
+                 'got unicode' in __invalid_input_failure_messages or
+                 'got AnsibleUnsafeText' in __invalid_input_failure_messages)
 
         - name: Assert systemd_started_units as a string was rejected
           ansible.builtin.assert:
@@ -86,8 +97,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_unit_files_item_type_failed: true
               when: >-
-                'must be a string or a dictionary' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_unit_files[0] must be a string or a dictionary, got int'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_unit_files item as integer was rejected
           ansible.builtin.assert:
@@ -111,8 +122,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_unit_files_missing_item_failed: true
               when: >-
-                "missing the required 'item' key" in
-                (ansible_failed_result | default({}) | to_json)
+                "systemd_unit_files[0] is missing the required 'item' key"
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_unit_files dict missing item key was rejected
           ansible.builtin.assert:
@@ -136,8 +147,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_unit_files_bad_key_failed: true
               when: >-
-                'contains invalid keys' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_unit_files[0] contains invalid keys: not_a_valid_key'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_unit_files dict with invalid key was rejected
           ansible.builtin.assert:
@@ -161,8 +172,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_started_units_bad_key_failed: true
               when: >-
-                'contains invalid keys' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_started_units[0] contains invalid keys: state'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_started_units dict with state key was rejected
           ansible.builtin.assert:
@@ -188,8 +199,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_dropins_state_failed: true
               when: >-
-                "must be 'present' or 'absent'" in
-                (ansible_failed_result | default({}) | to_json)
+                "systemd_dropins[0].state must be 'present' or 'absent', got invalid_state"
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_dropins invalid state value was rejected
           ansible.builtin.assert:
@@ -213,8 +224,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_mode_type_failed: true
               when: >-
-                'mode must be a string or integer' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_unit_file_templates[0].mode must be a string or integer, got bool'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_unit_file_templates mode as boolean was rejected
           ansible.builtin.assert:
@@ -238,8 +249,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_dir_mode_type_failed: true
               when: >-
-                'dir_mode must be a string or integer' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_dropins[0].dir_mode must be a string or integer, got bool'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_dropins dir_mode as boolean was rejected
           ansible.builtin.assert:
@@ -266,8 +277,8 @@
               ansible.builtin.set_fact:
                 __invalid_input_user_type_failed: true
               when: >-
-                'user must be a string' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_unit_files[0].user must be a string, got list'
+                in __invalid_input_failure_messages
 
         - name: Assert systemd_unit_files user as a list was rejected
           ansible.builtin.assert:
@@ -289,8 +300,10 @@
               ansible.builtin.set_fact:
                 __invalid_input_tu_reboot_ok_type_failed: true
               when: >-
-                'must be null or a boolean' in
-                (ansible_failed_result | default({}) | to_json)
+                'systemd_transactional_update_reboot_ok must be null or a boolean'
+                in __invalid_input_failure_messages and
+                ('got str' in __invalid_input_failure_messages or
+                 'got AnsibleUnicode' in __invalid_input_failure_messages)
 
         - name: Assert transactional_update_reboot_ok as string was rejected
           ansible.builtin.assert:
