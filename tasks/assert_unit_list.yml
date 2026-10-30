@@ -135,7 +135,7 @@
 - name: Assert mode value is a string or integer
   ansible.builtin.assert:
     that:
-      - (item.mode | type_debug) in ['str', 'int']
+      - item.mode is string or (item.mode | type_debug) == 'int'
     fail_msg: >-
       {{ __systemd_assert_list_name }}[{{ idx }}].mode must be a string
       or integer, got {{ item.mode | type_debug }}
@@ -150,7 +150,7 @@
 - name: Assert dir_mode value is a string or integer
   ansible.builtin.assert:
     that:
-      - (item.dir_mode | type_debug) in ['str', 'int']
+      - item.dir_mode is string or (item.dir_mode | type_debug) == 'int'
     fail_msg: >-
       {{ __systemd_assert_list_name }}[{{ idx }}].dir_mode must be a
       string or integer, got {{ item.dir_mode | type_debug }}
